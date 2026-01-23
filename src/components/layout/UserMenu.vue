@@ -50,7 +50,7 @@
           <div class="menu-item" :class="{ disabled: !workspaceStore.canCreateWorkspace }" @click="handleAddWorkspace">
             <i class="pi pi-plus"></i>
             <span>새 워크스페이스</span>
-            <span v-if="!workspaceStore.canCreateWorkspace" class="limit-badge">3/3</span>
+            <span class="limit-badge">{{ workspaceStore.teamWorkspaceCount }}/3</span>
           </div>
         </div>
 

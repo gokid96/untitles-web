@@ -628,7 +628,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: var(--surface-card);
+  background: var(--surface-ground);
 }
 
 .editor-topbar {
@@ -705,8 +705,8 @@ onBeforeUnmount(() => {
 }
 
 .tiptap-wrapper {
-  font-size: 1.0625rem;
-  line-height: 1.5;
+  font-size: 1rem;
+  line-height: 1.8;
   color: var(--text-color);
 }
 
@@ -845,7 +845,7 @@ onBeforeUnmount(() => {
   gap: 0.25rem;
   padding: 0.625rem 1.5rem;
   border-top: 1px solid var(--surface-border);
-  background: var(--surface-card);
+  background: var(--surface-ground);
 }
 
 .toolbar-group {

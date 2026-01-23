@@ -308,7 +308,7 @@ onUnmounted(() => {
 
 .sidebar {
   height: 100%;
-  background-color: var(--surface-card);
+  background-color: var(--surface-sidebar);
   border-right: 1px solid var(--surface-border);
   transition: width 0.2s ease;
   overflow: hidden;
@@ -345,7 +345,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--surface-card);
+  background: var(--surface-sidebar);
   border: 1px solid var(--surface-border);
   border-left: none;
   border-radius: 0 8px 8px 0;

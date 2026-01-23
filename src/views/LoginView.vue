@@ -3,18 +3,19 @@
     <div class="login-container">
       <!-- 로고 영역 -->
       <div class="logo-section">
-        <div class="logo-icon">
-          <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path fill="currentColor"
-              d="M50 8 C52 30 58 36 80 38 C58 40 52 46 50 68 C48 46 42 40 20 38 C42 36 48 30 50 8 Z" />
-            <path fill="currentColor"
-              d="M50 50 C51 62 54 65 66 66 C54 67 51 70 50 82 C49 70 46 67 34 66 C46 65 49 62 50 50 Z" />
-            <path fill="currentColor" opacity="0.5"
-              d="M78 70 C78.5 76 80 77.5 86 78 C80 78.5 78.5 80 78 86 C77.5 80 76 78.5 70 78 C76 77.5 77.5 76 78 70 Z" />
-          </svg>
-        </div>
-        <h1 class="logo-text">Untitles</h1>
-        <!-- <p class="logo-tagline">생각을 기록하고, 아이디어를 정리하세요</p> -->
+        <router-link to="/" class="logo-link">
+          <div class="logo-icon">
+            <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path fill="currentColor"
+                d="M50 8 C52 30 58 36 80 38 C58 40 52 46 50 68 C48 46 42 40 20 38 C42 36 48 30 50 8 Z" />
+              <path fill="currentColor"
+                d="M50 50 C51 62 54 65 66 66 C54 67 51 70 50 82 C49 70 46 67 34 66 C46 65 49 62 50 50 Z" />
+              <path fill="currentColor" opacity="0.5"
+                d="M78 70 C78.5 76 80 77.5 86 78 C80 78.5 78.5 80 78 86 C77.5 80 76 78.5 70 78 C76 77.5 77.5 76 78 70 Z" />
+            </svg>
+          </div>
+          <h1 class="logo-text">Untitles</h1>
+        </router-link>
       </div>
 
       <!-- 로그인 폼 -->
@@ -64,7 +65,7 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
@@ -73,6 +74,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { getErrorMessage } from '@/utils/helpers'
 
 const router = useRouter()
+const route = useRoute()
 const toast = useToast()
 const authStore = useAuthStore()
 
@@ -109,7 +111,9 @@ async function handleLogin() {
 
   try {
     await authStore.login(loginId.value, password.value)
-    router.push('/main')
+    // 리다이렉트 쿼리가 있으면 해당 경로로, 없으면 /app으로
+    const redirectPath = route.query.redirect || '/app'
+    router.push(redirectPath)
   } catch (error) {
     toast.add({
       severity: 'error',
@@ -124,13 +128,16 @@ async function handleLogin() {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600&family=Playfair+Display:wght@400;500;600&display=swap');
+
 .login-view {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+  background: linear-gradient(135deg, #0a0a0f 0%, #0f0f1a 50%, #0a1020 100%);
   padding: 2rem;
+  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .login-container {
@@ -142,6 +149,16 @@ async function handleLogin() {
 .logo-section {
   text-align: center;
   margin-bottom: 3rem;
+}
+
+.logo-link {
+  text-decoration: none;
+  color: inherit;
+  display: inline-block;
+}
+
+.logo-link:hover {
+  text-decoration: none;
 }
 
 .logo-icon {
@@ -158,17 +175,12 @@ async function handleLogin() {
 }
 
 .logo-text {
-  font-size: 2rem;
-  font-weight: 300;
-  letter-spacing: 0.10em;
+  font-family: 'Playfair Display', serif;
+  font-size: 1.75rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
   color: #ffffff;
   margin: 0 0 0.75rem;
-}
-
-.logo-tagline {
-  font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.6);
-  margin: 0;
 }
 
 /* 로그인 폼 */
@@ -200,7 +212,8 @@ async function handleLogin() {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   color: #ffffff;
-  font-size: 1rem;
+  font-size: 0.9375rem;
+  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
   transition: all 0.2s ease;
 }
 
@@ -249,9 +262,10 @@ async function handleLogin() {
   background: #ffffff;
   border: none;
   border-radius: 8px;
-  color: #0a0a0a;
-  font-size: 1rem;
+  color: #0a0a0f;
+  font-size: 0.9375rem;
   font-weight: 600;
+  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -288,6 +302,7 @@ async function handleLogin() {
 
 .register-link:hover {
   opacity: 0.8;
+  text-decoration: none;
 }
 
 /* 반응형 */
@@ -301,7 +316,7 @@ async function handleLogin() {
   }
 
   .logo-text {
-    font-size: 1.75rem;
+    font-size: 1.5rem;
   }
 }
 </style>

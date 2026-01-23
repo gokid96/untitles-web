@@ -26,6 +26,16 @@ const ModernPreset = definePreset(Aura, {
       950: '{neutral.950}',
     },
   },
+  components: {
+    tabview: {
+      tabPanel: {
+        background: 'transparent',
+      },
+      tabList: {
+        background: 'transparent',
+      },
+    },
+  },
 })
 
 // PrimeVue 컴포넌트

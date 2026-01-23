@@ -7,12 +7,13 @@
       <!-- 검색 (상단) -->
       <div class="search-box">
         <i class="pi pi-search"></i>
-        <input
+       <input
           type="text"
           v-model="searchInput"
           placeholder="검색..."
           @input="handleSearchInput"
         />
+
         <button v-if="searchInput" class="clear-btn" @click="clearSearch">
           <i class="pi pi-times"></i>
         </button>
@@ -443,7 +444,7 @@ function handleRootDrop(event) {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: var(--surface-card);
+  background-color: var(--surface-sidebar);
 }
 
 /* 검색 (상단) */

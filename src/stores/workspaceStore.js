@@ -30,9 +30,12 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   const canEdit = computed(() => myRole.value !== 'VIEWER')
 
   // 워크스페이스 생성 가능 여부 (TEAM 타입 3개 제한)
+  const teamWorkspaceCount = computed(() => {
+    return workspaces.value.filter(w => w.type === 'TEAM').length
+  })
+
   const canCreateWorkspace = computed(() => {
-    const teamCount = workspaces.value.filter(w => w.type === 'TEAM').length
-    return teamCount < 3
+    return teamWorkspaceCount.value < 3
   })
 
   // 워크스페이스 목록 로드
@@ -195,6 +198,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     isAdmin,
     canEdit,
     canCreateWorkspace,
+    teamWorkspaceCount,
     // 액션
     loadWorkspaces,
     createWorkspace,

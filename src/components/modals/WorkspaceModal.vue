@@ -19,7 +19,7 @@
             </div>
             <Button :label="isEditMode ? '변경사항 저장' : '워크스페이스 생성'" @click="handleSubmit" class="submit-btn"
               :disabled="!workspaceName.trim() || (isEditMode && !workspaceStore.isAdmin) || (!isEditMode && !workspaceStore.canCreateWorkspace)" :loading="isSubmitting" />
-            
+
             <!-- 생성 제한 안내 -->
             <div v-if="!isEditMode && !workspaceStore.canCreateWorkspace" class="limit-notice">
               <i class="pi pi-info-circle"></i>
@@ -307,7 +307,7 @@ onUnmounted(() => {
 // 메인 모달: ESC로 닫기
 function handleMainKeydown(e) {
   if (!props.visible || isDeleteConfirmOpen.value) return
-  
+
   if (e.key === 'Escape') {
     emit('update:visible', false)
   }
@@ -316,7 +316,7 @@ function handleMainKeydown(e) {
 // 삭제 모달: ESC로 닫기, Enter로 삭제
 function handleDeleteKeydown(e) {
   if (!isDeleteConfirmOpen.value) return
-  
+
   if (e.key === 'Escape') {
     isDeleteConfirmOpen.value = false
   } else if (e.key === 'Enter') {

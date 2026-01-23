@@ -126,7 +126,7 @@
       <!-- 로그인 링크 -->
       <div class="login-section">
         <span>이미 계정이 있으신가요?</span>
-        <router-link to="/" class="login-link">로그인</router-link>
+        <router-link to="/login" class="login-link">로그인</router-link>
       </div>
     </div>
   </div>
@@ -290,7 +290,7 @@ async function handleRegister() {
 
   try {
     await authStore.register(formData)
-    router.push('/main')
+    router.push('/app')
   } catch (error) {
     toast.add({
       severity: 'error',
@@ -337,6 +337,7 @@ async function handleRegister() {
 
 .back-link:hover {
   color: #ffffff;
+  text-decoration: none;
 }
 
 .logo-text {
@@ -505,6 +506,7 @@ async function handleRegister() {
 
 .login-link:hover {
   opacity: 0.8;
+  text-decoration: none;
 }
 
 @media (max-width: 480px) {

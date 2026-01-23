@@ -2,7 +2,7 @@
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="visible" class="modal-overlay" @click.self="handleCancel">
-        <div class="modal-container">
+        <div class="modal-container" ref="modalRef">
           <div class="modal-icon">
             <i class="pi pi-trash"></i>
           </div>
@@ -12,7 +12,7 @@
             <button class="btn btn-secondary" @click="handleCancel">
               취소
             </button>
-            <button class="btn btn-danger" @click="handleConfirm">
+            <button ref="confirmBtnRef" class="btn btn-danger" @click="handleConfirm">
               삭제
             </button>
           </div>
@@ -23,7 +23,7 @@
 </template>
 
 <script setup>
-import { watch, onUnmounted } from 'vue'
+import { ref, watch, onUnmounted, nextTick } from 'vue'
 
 const props = defineProps({
   visible: {
@@ -42,6 +42,9 @@ const props = defineProps({
 
 const emit = defineEmits(['update:visible', 'confirm', 'cancel'])
 
+const modalRef = ref(null)
+const confirmBtnRef = ref(null)
+
 function handleConfirm() {
   emit('confirm')
   emit('update:visible', false)
@@ -57,8 +60,10 @@ function handleKeydown(e) {
   if (!props.visible) return
   
   if (e.key === 'Escape') {
+    e.preventDefault()
     handleCancel()
   } else if (e.key === 'Enter') {
+    e.preventDefault()
     handleConfirm()
   }
 }
@@ -66,10 +71,14 @@ function handleKeydown(e) {
 watch(() => props.visible, (visible) => {
   if (visible) {
     document.addEventListener('keydown', handleKeydown)
+    // 모달이 열리면 삭제 버튼에 포커스
+    nextTick(() => {
+      confirmBtnRef.value?.focus()
+    })
   } else {
     document.removeEventListener('keydown', handleKeydown)
   }
-})
+}, { immediate: true })
 
 onUnmounted(() => {
   document.removeEventListener('keydown', handleKeydown)

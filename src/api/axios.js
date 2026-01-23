@@ -13,6 +13,9 @@ const apiClient = axios.create({
   withCredentials: true,
 })
 
+// 401 처리가 필요 없는 경로들 (로그인/회원가입 페이지)
+const AUTH_PAGES = ['/login', '/register']
+
 // 요청 인터셉터
 apiClient.interceptors.request.use(
   (config) => {
@@ -46,13 +49,16 @@ apiClient.interceptors.response.use(
 
     const { status, data } = error.response
     const errorMessage = data?.message || '오류가 발생했습니다'
+    const currentPath = router.currentRoute.value.path
 
     switch (status) {
       case 401:
-        // 로그인 페이지가 아닐 때만 세션 만료 처리
-        if (router.currentRoute.value.path !== '/') {
+        // 인증 페이지에서의 401은 로그인 실패이므로 컴포넌트에서 처리하도록 pass
+        // 그 외 페이지에서의 401은 세션 만료
+        if (!AUTH_PAGES.includes(currentPath)) {
           appStore.showSessionExpired()
         }
+        // 로그인/회원가입 페이지의 401은 reject만 하고 컴포넌트에서 처리
         break
 
       case 403:

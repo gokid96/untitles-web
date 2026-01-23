@@ -45,7 +45,7 @@ function handleCreatePost() {
   align-items: center;
   justify-content: center;
   height: 100%;
-  background-color: var(--surface-card);
+  background-color: var(--surface-ground);
   padding: 2rem;
 }
 
