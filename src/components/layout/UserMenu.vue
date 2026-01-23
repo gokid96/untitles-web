@@ -3,83 +3,97 @@
     <!-- 사용자 버튼 -->
     <div class="user-button" @click="toggleMenu">
       <div class="user-avatar">
-        {{ userInitial }}
+        <img v-if="userProfileImage" :src="userProfileImage" alt="프로필" class="avatar-img" />
+        <span v-else>{{ userInitial }}</span>
       </div>
       <div class="user-info">
-        <span class="user-nickname">{{ authStore.currentUser?.nickname }}</span>
+        <span class="user-nickname">{{ currentUser?.nickname }}</span>
         <span class="workspace-name">{{ currentWorkspaceName }}</span>
       </div>
-      <i class="pi pi-chevron-up expand-icon"></i>
+      <i class="pi pi-chevron-up expand-icon" :class="{ rotated: isMenuOpen }"></i>
     </div>
 
     <!-- 팝업 메뉴 -->
-    <div v-if="isMenuOpen" class="user-popup-menu" ref="menuRef">
-      <!-- 워크스페이스 목록 -->
-      <div class="menu-section">
-        <div class="section-label">워크스페이스</div>
-        <div v-for="workspace in workspaceStore.workspaces" :key="workspace.workspaceId" class="workspace-item"
-          :class="{ active: workspace.workspaceId === workspaceStore.currentWorkspaceId }"
-          @click="handleSelectWorkspace(workspace.workspaceId)">
-          <div class="workspace-avatar" :class="{ 'team-workspace': isTeamWorkspace(workspace) }">
-            <i :class="isTeamWorkspace(workspace) ? 'pi pi-users' : 'pi pi-user'"></i>
+    <Transition name="menu">
+      <div v-if="isMenuOpen" class="popup-menu" ref="menuRef">
+        <!-- 워크스페이스 -->
+        <div class="menu-section">
+          <div class="section-label">워크스페이스</div>
+          <div
+            v-for="workspace in workspaceStore.workspaces"
+            :key="workspace.workspaceId"
+            class="workspace-item"
+            :class="{ active: workspace.workspaceId === workspaceStore.currentWorkspaceId }"
+            @click="handleSelectWorkspace(workspace.workspaceId)"
+          >
+            <div class="workspace-icon" :class="{ team: workspace.type === 'TEAM' }">
+              <i :class="workspace.type === 'TEAM' ? 'pi pi-users' : 'pi pi-user'"></i>
+            </div>
+            <div class="workspace-details">
+              <span class="workspace-name">{{ workspace.name }}</span>
+              <span v-if="workspace.type === 'TEAM'" class="member-count">{{ workspace.memberCount }}명</span>
+            </div>
+            <!-- 개인 워크스페이스는 설정 버튼 숨김 -->
+            <button
+              v-if="workspace.workspaceId === workspaceStore.currentWorkspaceId && workspace.type === 'TEAM'"
+              class="settings-btn"
+              @click.stop="handleManageWorkspace(workspace)"
+            >
+              <i class="pi pi-cog"></i>
+            </button>
           </div>
-          <div class="workspace-item-info">
-            <span class="workspace-item-name">{{ workspace.name }}</span>
-            <span v-if="isTeamWorkspace(workspace)" class="workspace-member-count">{{ workspace.memberCount }}명</span>
+        </div>
+
+        <div class="menu-divider"></div>
+
+        <div class="menu-section">
+          <div class="menu-item" :class="{ disabled: !workspaceStore.canCreateWorkspace }" @click="handleAddWorkspace">
+            <i class="pi pi-plus"></i>
+            <span>새 워크스페이스</span>
+            <span v-if="!workspaceStore.canCreateWorkspace" class="limit-badge">3/3</span>
           </div>
-          <i v-if="workspace.workspaceId === workspaceStore.currentWorkspaceId" class="pi pi-cog settings-icon"
-            @click.stop="handleManageWorkspace(workspace)"></i>
+        </div>
 
+        <div class="menu-divider"></div>
 
+        <div class="menu-section">
+          <div class="menu-item" @click="handleOpenProfile">
+            <i class="pi pi-user"></i>
+            <span>내 정보</span>
+          </div>
+          <div class="menu-item" @click="toggleTheme">
+            <i :class="uiStore.isDarkMode ? 'pi pi-sun' : 'pi pi-moon'"></i>
+            <span>{{ uiStore.isDarkMode ? '라이트 모드' : '다크 모드' }}</span>
+          </div>
+        </div>
+
+        <div class="menu-divider"></div>
+
+        <div class="menu-section">
+          <div class="menu-item danger" @click="handleLogout">
+            <i class="pi pi-sign-out"></i>
+            <span>로그아웃</span>
+          </div>
         </div>
       </div>
+    </Transition>
 
-      <div class="menu-divider"></div>
-
-      <!-- 워크스페이스 관리 -->
-      <div class="menu-section">
-        <div class="menu-item" @click="handleAddWorkspace">
-          <i class="pi pi-plus"></i>
-          <span>워크스페이스 추가</span>
-        </div>
-      </div>
-
-      <div class="menu-divider"></div>
-
-      <!-- 설정 -->
-      <div class="menu-section">
-        <div class="menu-item" @click="handleOpenProfile">
-          <i class="pi pi-user"></i>
-          <span>내 정보</span>
-        </div>
-        <div class="menu-item" @click="toggleTheme">
-          <i :class="uiStore.isDarkMode ? 'pi pi-sun' : 'pi pi-moon'"></i>
-          <span>{{ uiStore.isDarkMode ? '라이트 모드' : '다크 모드' }}</span>
-        </div>
-      </div>
-
-      <div class="menu-divider"></div>
-
-      <!-- 로그아웃 -->
-      <div class="menu-section">
-        <div class="menu-item logout" @click="handleLogout">
-          <i class="pi pi-sign-out"></i>
-          <span>로그아웃</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- 내 정보 모달 -->
+    <!-- 모달 -->
     <ProfileModal v-model:visible="isProfileModalOpen" />
-
-    <!-- 워크스페이스 모달 (추가/설정 공용) -->
-    <WorkspaceModal v-model:visible="isWorkspaceModalOpen" :mode="workspaceModalMode" @created="handleWorkspaceCreated"
-      @updated="handleWorkspaceUpdated" @deleted="handleWorkspaceDeleted" @left="handleWorkspaceLeft" />
+    <WorkspaceModal
+      v-model:visible="isWorkspaceModalOpen"
+      :mode="workspaceModalMode"
+      @created="handleWorkspaceCreated"
+      @updated="handleWorkspaceUpdated"
+      @deleted="handleWorkspaceDeleted"
+      @left="handleWorkspaceLeft"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import { useUiStore } from '@/stores/uiStore'
@@ -96,24 +110,26 @@ const workspaceStore = useWorkspaceStore()
 const folderStore = useFolderStore()
 const postStore = usePostStore()
 
+// storeToRefs로 반응성 유지
+const { currentUser } = storeToRefs(authStore)
+
 const isMenuOpen = ref(false)
 const isProfileModalOpen = ref(false)
 const isWorkspaceModalOpen = ref(false)
-const workspaceModalMode = ref('create') // 'create' | 'edit'
+const workspaceModalMode = ref('create')
 const menuRef = ref(null)
 
 const userInitial = computed(() => {
-  const nickname = authStore.currentUser?.nickname
-  return nickname.charAt(0).toUpperCase()
+  return currentUser.value?.nickname?.charAt(0).toUpperCase() || 'U'
+})
+
+const userProfileImage = computed(() => {
+  return currentUser.value?.profileImage || ''
 })
 
 const currentWorkspaceName = computed(() => {
-  return workspaceStore.currentWorkspace?.name
+  return workspaceStore.currentWorkspace?.name || ''
 })
-
-function isTeamWorkspace(workspace) {
-  return workspace.memberCount && workspace.memberCount > 1
-}
 
 function toggleMenu() {
   isMenuOpen.value = !isMenuOpen.value
@@ -133,7 +149,6 @@ function toggleTheme() {
   closeMenu()
 }
 
-// 워크스페이스 선택
 async function handleSelectWorkspace(workspaceId) {
   if (workspaceStore.currentWorkspaceId === workspaceId) {
     closeMenu()
@@ -141,29 +156,29 @@ async function handleSelectWorkspace(workspaceId) {
   }
 
   workspaceStore.selectWorkspace(workspaceId)
-
   folderStore.clearFolderData()
   postStore.clearPostData()
 
-  await Promise.all([
-    folderStore.loadAllFolders(),
-    postStore.fetchPosts()
-  ])
-
-  folderStore.updateFolderTree()
+  // FolderSidebar의 watch가 트리거되어 자동으로 loadWorkspaceTree() 호출됨
   closeMenu()
 }
 
-// 워크스페이스 추가 모달 열기
 function handleAddWorkspace() {
+  // 생성 제한 체크
+  if (!workspaceStore.canCreateWorkspace) {
+    return
+  }
   workspaceModalMode.value = 'create'
   isWorkspaceModalOpen.value = true
   closeMenu()
 }
 
-// 워크스페이스 설정 모달 열기
 async function handleManageWorkspace(workspace) {
-  // 선택된 워크스페이스가 아니면 먼저 선택
+  // 개인 워크스페이스는 설정 불가
+  if (workspace.type === 'PERSONAL') {
+    return
+  }
+
   if (workspace.workspaceId !== workspaceStore.currentWorkspaceId) {
     await handleSelectWorkspace(workspace.workspaceId)
   }
@@ -172,24 +187,18 @@ async function handleManageWorkspace(workspace) {
   closeMenu()
 }
 
-// 워크스페이스 생성 완료
 async function handleWorkspaceCreated(workspace) {
   await handleSelectWorkspace(workspace.workspaceId)
 }
 
-// 워크스페이스 수정 완료
-function handleWorkspaceUpdated() {
-  // 필요 시 추가 처리
-}
+function handleWorkspaceUpdated() {}
 
-// 워크스페이스 삭제 완료
 async function handleWorkspaceDeleted() {
   if (workspaceStore.workspaces.length > 0) {
     await handleSelectWorkspace(workspaceStore.workspaces[0].workspaceId)
   }
 }
 
-// 워크스페이스 나가기 완료
 async function handleWorkspaceLeft() {
   if (workspaceStore.workspaces.length > 0) {
     await handleSelectWorkspace(workspaceStore.workspaces[0].workspaceId)
@@ -202,7 +211,6 @@ async function handleLogout() {
   router.push('/')
 }
 
-// 외부 클릭 시 메뉴 닫기
 function handleClickOutside(event) {
   const container = document.querySelector('.user-menu-container')
   if (container && !container.contains(event.target)) {
@@ -229,9 +237,9 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.75rem;
+  padding: 0.47rem 1rem;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.15s;
 }
 
 .user-button:hover {
@@ -241,25 +249,36 @@ onUnmounted(() => {
 .user-avatar {
   width: 32px;
   height: 32px;
-  border-radius: 6px;
-  background-color: var(--primary-color);
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-700) 100%);
   color: var(--primary-color-text);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
   font-size: 0.875rem;
+  overflow: hidden;
+}
+
+.user-avatar .avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dark-mode .user-avatar {
+  background: linear-gradient(135deg, var(--primary-300) 0%, var(--primary-400) 100%);
+  color: var(--surface-ground);
 }
 
 .user-info {
   flex: 1;
-  display: flex;
-  flex-direction: column;
   min-width: 0;
 }
 
 .user-nickname {
-  font-weight: 600;
+  display: block;
+  font-weight: 500;
   font-size: 0.875rem;
   color: var(--text-color);
   white-space: nowrap;
@@ -268,6 +287,7 @@ onUnmounted(() => {
 }
 
 .workspace-name {
+  display: block;
   font-size: 0.75rem;
   color: var(--text-color-secondary);
   white-space: nowrap;
@@ -278,27 +298,32 @@ onUnmounted(() => {
 .expand-icon {
   color: var(--text-color-secondary);
   font-size: 0.75rem;
+  transition: transform 0.2s;
+}
+
+.expand-icon.rotated {
+  transform: rotate(180deg);
 }
 
 /* 팝업 메뉴 */
-.user-popup-menu {
+.popup-menu {
   position: absolute;
   bottom: 100%;
   left: 0;
   right: 0;
   margin-bottom: 4px;
-  background-color: var(--surface-overlay);
+  background: var(--surface-overlay);
   border: 1px solid var(--surface-border);
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
   z-index: 1000;
   overflow: hidden;
   max-height: 400px;
   overflow-y: auto;
 }
 
-.dark-mode .user-popup-menu {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+.dark-mode .popup-menu {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
 .menu-section {
@@ -307,7 +332,7 @@ onUnmounted(() => {
 
 .section-label {
   padding: 0.5rem 0.75rem;
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   font-weight: 600;
   color: var(--text-color-secondary);
   text-transform: uppercase;
@@ -316,7 +341,7 @@ onUnmounted(() => {
 
 .menu-divider {
   height: 1px;
-  background-color: var(--surface-border);
+  background: var(--surface-border);
 }
 
 .menu-item {
@@ -324,16 +349,24 @@ onUnmounted(() => {
   align-items: center;
   gap: 0.75rem;
   padding: 0.625rem 0.75rem;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   transition: background-color 0.15s;
   color: var(--text-color);
   font-size: 0.875rem;
-  position: relative;
 }
 
 .menu-item:hover {
-  background-color: var(--surface-hover);
+  background: var(--surface-hover);
+}
+
+.menu-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.menu-item.disabled:hover {
+  background: transparent;
 }
 
 .menu-item i {
@@ -343,17 +376,21 @@ onUnmounted(() => {
   text-align: center;
 }
 
-.menu-item .pi-check {
+.menu-item.danger {
+  color: var(--red-500);
+}
+
+.menu-item.danger i {
+  color: var(--red-500);
+}
+
+.limit-badge {
   margin-left: auto;
-  color: var(--primary-color);
-}
-
-.menu-item.logout {
-  color: var(--red-500);
-}
-
-.menu-item.logout i {
-  color: var(--red-500);
+  font-size: 0.6875rem;
+  padding: 0.125rem 0.5rem;
+  background: var(--surface-border);
+  border-radius: 4px;
+  color: var(--text-color-secondary);
 }
 
 /* 워크스페이스 아이템 */
@@ -361,67 +398,88 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.625rem 0.75rem;
-  margin-bottom: 0.325rem;
-  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
   cursor: pointer;
   transition: background-color 0.15s;
-  color: var(--text-color);
-  font-size: 0.875rem;
 }
 
 .workspace-item:hover {
-  background-color: var(--surface-hover);
+  background: var(--surface-hover);
 }
 
 .workspace-item.active {
-  background-color: var(--surface-hover);
+  background: var(--highlight-bg);
 }
 
-.workspace-item .check-icon {
-  color: var(--primary-color);
-  font-size: 0.875rem;
-}
-
-.workspace-item .settings-icon {
-  color: var(--primary-color);
-  font-size: 0.875rem;
-  padding: 0.25rem;
-  border-radius: 4px;
-}
-
-
-.workspace-avatar {
-  width: 24px;
-  height: 24px;
-  border-radius: 4px;
-  background-color: var(--primary-color);
-  color: var(--primary-color-text);
+.workspace-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--surface-border);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 600;
-  font-size: 0.75rem;
 }
 
-.workspace-avatar i {
-  font-size: 0.75rem;
+.workspace-icon.team {
+  background: var(--primary-color);
+  color: var(--primary-color-text);
 }
 
-.workspace-item-info {
+.workspace-icon i {
+  font-size: 0.75rem;
+  color: var(--text-color-secondary);
+}
+
+.workspace-icon.team i {
+  color: inherit;
+}
+
+.workspace-details {
   flex: 1;
-  display: flex;
-  flex-direction: column;
   min-width: 0;
 }
 
-.workspace-item-name {
+.workspace-details .workspace-name {
+  display: block;
   font-size: 0.875rem;
   color: var(--text-color);
 }
 
-.workspace-member-count {
-  font-size: 0.7rem;
+.member-count {
+  font-size: 0.6875rem;
   color: var(--text-color-secondary);
+}
+
+.settings-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-color-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.settings-btn:hover {
+  background: var(--surface-border);
+  color: var(--text-color);
+}
+
+/* 트랜지션 */
+.menu-enter-active,
+.menu-leave-active {
+  transition: all 0.2s ease;
+}
+
+.menu-enter-from,
+.menu-leave-to {
+  opacity: 0;
+  transform: translateY(8px);
 }
 </style>

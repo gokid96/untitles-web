@@ -8,6 +8,26 @@
     @update:visible="handleVisibleChange"
   >
     <div class="profile-form">
+      <!-- 프로필 이미지 -->
+      <div class="profile-avatar-section">
+        <div class="avatar-wrapper" @click="triggerImageUpload">
+          <img v-if="profileImageUrl" :src="profileImageUrl" alt="프로필" class="avatar-image" />
+          <div v-else class="avatar-placeholder">{{ userInitial }}</div>
+          <div class="avatar-overlay">
+            <i v-if="isUploading" class="pi pi-spin pi-spinner"></i>
+            <i v-else class="pi pi-camera"></i>
+          </div>
+        </div>
+        <input
+          ref="imageInput"
+          type="file"
+          accept="image/*"
+          style="display: none"
+          @change="handleImageUpload"
+        />
+        <span class="avatar-hint">클릭하여 이미지 변경</span>
+      </div>
+
       <!-- 닉네임 -->
       <div class="field">
         <label for="nickname">닉네임</label>
@@ -65,19 +85,21 @@
 
     <template #footer>
       <Button label="취소" severity="secondary" @click="handleCancel" text />
-      <Button label="저장" severity="primary" @click="handleSave" />
+      <Button label="저장" severity="primary" @click="handleSave" :disabled="isUploading" :loading="isSaving" />
     </template>
   </Dialog>
 </template>
 
 <script setup>
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, computed, watch, onUnmounted } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useToast } from 'primevue/usetoast'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Button from 'primevue/button'
 import { useAuthStore } from '@/stores/authStore'
+import { imageApi } from '@/api/imageApi'
 import { getErrorMessage } from '@/utils/helpers'
 
 const props = defineProps({
@@ -91,24 +113,55 @@ const emit = defineEmits(['update:visible'])
 
 const toast = useToast()
 const authStore = useAuthStore()
+const { currentUser } = storeToRefs(authStore)
+
 const isSaving = ref(false)
+const isUploading = ref(false)
+const imageInput = ref(null)
 
 const formData = reactive({
   nickname: '',
   currentPassword: '',
   newPassword: '',
   confirmPassword: '',
+  profileImage: '',
+})
+
+const userInitial = computed(() => {
+  return currentUser.value?.nickname?.charAt(0).toUpperCase() || 'U'
+})
+
+const profileImageUrl = computed(() => {
+  return formData.profileImage || currentUser.value?.profileImage || ''
 })
 
 // 모달이 열릴 때 현재 사용자 정보로 초기화
 watch(() => props.visible, (newVal) => {
   if (newVal) {
-    formData.nickname = authStore.currentUser?.nickname || ''
+    formData.nickname = currentUser.value?.nickname || ''
     formData.currentPassword = ''
     formData.newPassword = ''
     formData.confirmPassword = ''
+    formData.profileImage = currentUser.value?.profileImage || ''
+    document.addEventListener('keydown', handleKeydown)
+  } else {
+    document.removeEventListener('keydown', handleKeydown)
   }
 })
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeydown)
+})
+
+function handleKeydown(e) {
+  if (!props.visible) return
+  
+  if (e.key === 'Escape') {
+    handleCancel()
+  } else if (e.key === 'Enter' && !e.shiftKey) {
+    handleSave()
+  }
+}
 
 function handleVisibleChange(value) {
   emit('update:visible', value)
@@ -116,6 +169,40 @@ function handleVisibleChange(value) {
 
 function handleCancel() {
   emit('update:visible', false)
+}
+
+function triggerImageUpload() {
+  if (!isUploading.value) {
+    imageInput.value?.click()
+  }
+}
+
+async function handleImageUpload(event) {
+  const file = event.target.files?.[0]
+  if (!file) return
+
+  // 파일 검증
+  if (!file.type.startsWith('image/')) {
+    toast.add({ severity: 'error', summary: '오류', detail: '이미지 파일만 업로드 가능합니다.', life: 3000 })
+    return
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    toast.add({ severity: 'error', summary: '오류', detail: '파일 크기는 5MB 이하여야 합니다.', life: 3000 })
+    return
+  }
+
+  try {
+    isUploading.value = true
+    const response = await imageApi.uploadProfileImage(file)
+    formData.profileImage = response.data.url
+  } catch (error) {
+    console.error('Image upload failed:', error)
+    toast.add({ severity: 'error', summary: '업로드 실패', detail: '이미지 업로드에 실패했습니다.', life: 3000 })
+  } finally {
+    isUploading.value = false
+    event.target.value = ''
+  }
 }
 
 async function handleSave() {
@@ -179,6 +266,11 @@ async function handleSave() {
       nickname: formData.nickname,
     }
 
+    // profileImage가 변경된 경우에만 포함
+    if (formData.profileImage !== currentUser.value?.profileImage) {
+      updateData.profileImage = formData.profileImage || null
+    }
+
     // 비밀번호 변경이 있는 경우
     if (formData.newPassword && formData.currentPassword) {
       updateData.currentPassword = formData.currentPassword
@@ -214,6 +306,65 @@ async function handleSave() {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+}
+
+.profile-avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.avatar-wrapper {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-700) 100%);
+  color: var(--primary-color-text);
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+.avatar-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.avatar-wrapper:hover .avatar-overlay {
+  opacity: 1;
+}
+
+.avatar-overlay i {
+  color: white;
+  font-size: 1.5rem;
+}
+
+.avatar-hint {
+  font-size: 0.75rem;
+  color: var(--text-color-secondary);
 }
 
 .field {

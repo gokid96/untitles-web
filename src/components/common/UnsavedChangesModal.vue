@@ -4,16 +4,22 @@
       <div v-if="visible" class="modal-overlay" @click.self="handleCancel">
         <div class="modal-container">
           <div class="modal-icon">
-            <i class="pi pi-trash"></i>
+            <i class="pi pi-exclamation-triangle"></i>
           </div>
-          <h3 class="modal-title">{{ header || '삭제 확인' }}</h3>
-          <p class="modal-message">{{ message }}</p>
+          <h3 class="modal-title">저장되지 않은 변경사항</h3>
+          <p class="modal-message">
+            변경사항이 저장되지 않았습니다.<br>
+            저장하지 않고 나가시겠습니까?
+          </p>
           <div class="modal-actions">
             <button class="btn btn-secondary" @click="handleCancel">
               취소
             </button>
-            <button class="btn btn-danger" @click="handleConfirm">
-              삭제
+            <button class="btn btn-danger" @click="handleDiscard">
+              저장 안 함
+            </button>
+            <button class="btn btn-primary" @click="handleSave">
+              저장
             </button>
           </div>
         </div>
@@ -28,23 +34,18 @@ import { watch, onUnmounted } from 'vue'
 const props = defineProps({
   visible: {
     type: Boolean,
-    default: false,
-  },
-  header: {
-    type: String,
-    default: '',
-  },
-  message: {
-    type: String,
-    default: '정말 삭제하시겠습니까?',
-  },
+    default: false
+  }
 })
 
-const emit = defineEmits(['update:visible', 'confirm', 'cancel'])
+const emit = defineEmits(['update:visible', 'save', 'discard', 'cancel'])
 
-function handleConfirm() {
-  emit('confirm')
-  emit('update:visible', false)
+function handleSave() {
+  emit('save')
+}
+
+function handleDiscard() {
+  emit('discard')
 }
 
 function handleCancel() {
@@ -59,7 +60,7 @@ function handleKeydown(e) {
   if (e.key === 'Escape') {
     handleCancel()
   } else if (e.key === 'Enter') {
-    handleConfirm()
+    handleSave()
   }
 }
 
@@ -93,7 +94,7 @@ onUnmounted(() => {
   border: 1px solid var(--surface-border);
   border-radius: 16px;
   padding: 2rem;
-  max-width: 380px;
+  max-width: 400px;
   width: 90%;
   text-align: center;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
@@ -103,7 +104,7 @@ onUnmounted(() => {
   width: 56px;
   height: 56px;
   margin: 0 auto 1.25rem;
-  background: #fee2e2;
+  background: #fef3c7;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -111,12 +112,12 @@ onUnmounted(() => {
 }
 
 .dark-mode .modal-icon {
-  background: rgba(239, 68, 68, 0.2);
+  background: rgba(245, 158, 11, 0.2);
 }
 
 .modal-icon i {
   font-size: 1.5rem;
-  color: #ef4444;
+  color: #f59e0b;
 }
 
 .modal-title {
@@ -131,7 +132,6 @@ onUnmounted(() => {
   font-size: 0.9375rem;
   color: var(--text-color-secondary);
   line-height: 1.5;
-  white-space: pre-line;
 }
 
 .modal-actions {
@@ -141,7 +141,7 @@ onUnmounted(() => {
 }
 
 .btn {
-  padding: 0.625rem 1.5rem;
+  padding: 0.625rem 1.25rem;
   border-radius: 8px;
   font-size: 0.875rem;
   font-weight: 500;
@@ -160,12 +160,23 @@ onUnmounted(() => {
 }
 
 .btn-danger {
+  background: transparent;
+  color: #ef4444;
+  border: 1px solid #ef4444;
+}
+
+.btn-danger:hover {
   background: #ef4444;
   color: #ffffff;
 }
 
-.btn-danger:hover {
-  background: #dc2626;
+.btn-primary {
+  background: var(--primary-color);
+  color: var(--primary-color-text);
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
 }
 
 /* 트랜지션 */

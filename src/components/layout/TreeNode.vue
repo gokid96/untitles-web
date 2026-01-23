@@ -1,31 +1,62 @@
 <template>
   <div class="tree-node">
-    <div class="tree-node-item" :class="{
-      'tree-node-selected': isSelected,
-      'tree-node-folder': node.type === 'folder',
-      'tree-node-post': node.type === 'post',
-      'tree-node-drag-over': isDragOver
-    }" :draggable="!isEditing" @click="handleClick" @contextmenu.prevent="handleContextMenu"
-      @dragstart="handleDragStart" @dragover.prevent="handleDragOver" @drop.prevent="handleDrop"
-      @dragleave="handleDragLeave" @dragend="handleDragEnd">
-
-      <span class="tree-node-toggle" @click.stop="toggleExpand" v-if="node.type === 'folder'">
+    <div
+      class="tree-node-item"
+      :class="{
+        'selected': isSelected,
+        'folder': node.type === 'folder',
+        'post': node.type === 'post',
+        'drag-over': isDragOver
+      }"
+      :draggable="!isEditing"
+      @click="handleClick"
+      @contextmenu.prevent="handleContextMenu"
+      @dragstart="handleDragStart"
+      @dragover.prevent="handleDragOver"
+      @drop.prevent="handleDrop"
+      @dragleave="handleDragLeave"
+      @dragend="handleDragEnd"
+    >
+      <!-- 토글 아이콘 -->
+      <span class="toggle-icon" @click.stop="toggleExpand" v-if="node.type === 'folder'">
         <i :class="isExpanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"></i>
       </span>
-      <span class="tree-node-icon"></span>
+      <span class="toggle-icon" v-else></span>
 
-      <!-- 인라인 편집 모드 -->
-      <input v-if="isEditing" ref="editInput" v-model="editingName" class="tree-node-edit-input" @blur="finishEditing"
-        @keydown.enter="finishEditing" @keydown.escape="cancelEditing" @click.stop />
-      <span v-else class="tree-node-label">{{ node.label }}</span>
+      <!-- 아이콘 -->
+      <span class="node-icon">
+        <i :class="node.type === 'folder' ? (isExpanded ? 'pi pi-folder-open' : 'pi pi-folder') : 'pi pi-file'"></i>
+      </span>
+
+      <!-- 라벨 / 편집 -->
+      <input
+        v-if="isEditing"
+        ref="editInput"
+        v-model="editingName"
+        class="edit-input"
+        @blur="finishEditing"
+        @keydown.enter="finishEditing"
+        @keydown.escape="cancelEditing"
+        @click.stop
+      />
+      <span v-else class="node-label">{{ node.label }}</span>
     </div>
 
-    <!-- 하위 노드 + 세로선 -->
+    <!-- 하위 노드 -->
     <div class="tree-node-children" v-if="isExpanded && node.children && node.children.length > 0">
-      <TreeNode v-for="child in node.children" :key="child.key" :node="child" :selected-key="selectedKey"
-        :editing-key="editingKey" :expand-all="expandAll" @node-click="$emit('node-click', $event)"
-        @node-context-menu="$emit('node-context-menu', $event)" @node-drag-start="$emit('node-drag-start', $event)"
-        @node-drop="$emit('node-drop', $event)" @node-rename="$emit('node-rename', $event)" />
+      <TreeNode
+        v-for="child in node.children"
+        :key="child.key"
+        :node="child"
+        :selected-key="selectedKey"
+        :editing-key="editingKey"
+        :expand-all="expandAll"
+        @node-click="$emit('node-click', $event)"
+        @node-context-menu="$emit('node-context-menu', $event)"
+        @node-drag-start="$emit('node-drag-start', $event)"
+        @node-drop="$emit('node-drop', $event)"
+        @node-rename="$emit('node-rename', $event)"
+      />
     </div>
   </div>
 </template>
@@ -55,13 +86,6 @@ const props = defineProps({
 const emit = defineEmits(['node-click', 'node-context-menu', 'node-drag-start', 'node-drop', 'node-rename'])
 
 const isExpanded = ref(true)
-
-// expandAll prop이 변경되면 모든 폴더 열기/닫기
-watch(() => props.expandAll, (newVal) => {
-  if (newVal !== null && props.node.type === 'folder') {
-    isExpanded.value = newVal
-  }
-})
 const isDragOver = ref(false)
 const editInput = ref(null)
 const editingName = ref('')
@@ -69,7 +93,12 @@ const editingName = ref('')
 const isSelected = computed(() => props.selectedKey === props.node.key)
 const isEditing = computed(() => props.editingKey === props.node.key)
 
-// 편집 모드 진입 시 input에 포커스
+watch(() => props.expandAll, (newVal) => {
+  if (newVal !== null && props.node.type === 'folder') {
+    isExpanded.value = newVal
+  }
+})
+
 watch(isEditing, async (newVal) => {
   if (newVal) {
     editingName.value = props.node.label
@@ -98,7 +127,7 @@ function finishEditing() {
   if (newName && newName !== props.node.label) {
     emit('node-rename', { node: props.node, newName })
   } else {
-    emit('node-rename', { node: props.node, newName: null }) // 취소
+    emit('node-rename', { node: props.node, newName: null })
   }
 }
 
@@ -133,83 +162,106 @@ function handleDragEnd() {
   isDragOver.value = false
 }
 </script>
+
 <style scoped>
 .tree-node {
   user-select: none;
-  position: relative;
-  /* 👈 추가 */
-}
-
-.tree-node-children {
-  margin-left: 1.5rem;
-  position: relative;
-  /* 👈 추가 */
-}
-
-/* 세로선 추가 */
-.tree-node-children::before {
-  content: '';
-  position: absolute;
-  left: -0.70rem;
-  top: 0;
-  bottom: 0.5rem;
-  width: 1px;
-  background-color: darkgray;
 }
 
 .tree-node-item {
   display: flex;
   align-items: center;
-  padding: 0.2rem;
+  gap: 0.25rem;
+  padding: 0.375rem 0.5rem;
+  margin: 0.5px 0;
+  border-radius: 6px;
   cursor: pointer;
-  border-radius: 4px;
-  transition: background-color 0.2s;
+  transition: all 0.15s;
 }
 
 .tree-node-item:hover {
   background-color: var(--surface-hover);
 }
 
-.tree-node-item.tree-node-selected {
+.tree-node-item.selected {
   background-color: var(--highlight-bg);
-  color: var(--highlight-text-color);
 }
 
-.tree-node-toggle {
-  width: 20px;
+.tree-node-item.drag-over {
+  background-color: var(--primary-color);
+  opacity: 0.2;
+}
+
+.toggle-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 0.25rem;
-  cursor: pointer;
+  width: 7px;
+  height: 18px;
+  flex-shrink: 0;
 }
 
-.tree-node-toggle i {
-  font-size: 0.75rem;
+.toggle-icon i {
+  font-size: 0.625rem;
+  color: var(--text-color-secondary);
+  transition: transform 0.15s;
 }
 
-.tree-node-label {
+.node-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.node-icon i {
+  font-size: 0.875rem;
+  color: var(--text-color-secondary);
+}
+
+.tree-node-item.folder .node-icon i {
+  color: var(--primary-color);
+}
+
+.node-label {
   flex: 1;
+  font-size: 0.875rem;
+  color: var(--text-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.tree-node-drag-over {
-  background-color: var(--primary-color) !important;
-  opacity: 0.3;
-}
-
-.tree-node-edit-input {
+.edit-input {
   flex: 1;
-  padding: 0.1rem 0.3rem;
+  padding: 0.125rem 0.375rem;
   border: 1px solid var(--primary-color);
-  border-radius: 3px;
+  border-radius: 4px;
   background-color: var(--surface-ground);
   color: var(--text-color);
-  font-size: inherit;
+  font-size: 0.875rem;
   outline: none;
   min-width: 0;
 }
 
-.tree-node-edit-input:focus {
-  box-shadow: 0 0 0 2px var(--primary-color-transparent, rgba(var(--primary-color), 0.2));
+.edit-input:focus {
+  box-shadow: 0 0 0 2px var(--focus-ring-alpha);
+}
+
+.tree-node-children {
+  margin-left: 1.25rem;
+  position: relative;
+}
+
+.tree-node-children::before {
+  content: '';
+  position: absolute;
+  left: -0.625rem;
+  top: 0;
+  bottom: 0.5rem;
+  width: 1px;
+  background-color: var(--surface-border);
 }
 </style>

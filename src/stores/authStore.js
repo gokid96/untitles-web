@@ -24,6 +24,7 @@ export const useAuthStore = defineStore('auth', () => {
           id: response.data.userId,
           loginId: response.data.loginId,
           nickname: response.data.nickname,
+          profileImage: response.data.profileImage,
         }
 
         // 워크스페이스 로드
@@ -83,6 +84,7 @@ export const useAuthStore = defineStore('auth', () => {
         id: userData.userId,
         loginId: userData.loginId,
         nickname: userData.nickname,
+        profileImage: userData.profileImage,
       }
 
       // 로그인 후 워크스페이스 로드
@@ -107,6 +109,7 @@ export const useAuthStore = defineStore('auth', () => {
         id: data.userId,
         loginId: data.loginId,
         nickname: data.nickname,
+        profileImage: data.profileImage,
       }
 
       // 회원가입 후 워크스페이스 로드 (기본 워크스페이스 자동 생성됨)
@@ -134,8 +137,19 @@ export const useAuthStore = defineStore('auth', () => {
   async function updateUserInfo(data) {
     try {
       const response = await userApi.updateUser(data)
-      currentUser.value = response.data
-      return response.data
+      const userData = response.data
+      
+      // currentUser 업데이트
+      currentUser.value = {
+        ...currentUser.value,
+        userId: userData.userId,
+        id: userData.userId,
+        loginId: userData.loginId,
+        nickname: userData.nickname,
+        profileImage: userData.profileImage,
+      }
+      
+      return userData
     } catch (error) {
       console.error('Failed to update user info:', error)
       throw error

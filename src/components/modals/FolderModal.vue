@@ -17,7 +17,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
@@ -51,12 +51,26 @@ watch(
       isEditMode.value = !!props.folder
       folderName.value = props.folder?.name || ''
       isSaving.value = false
+      document.addEventListener('keydown', handleKeydown)
     } else {
       folderName.value = ''
       isSaving.value = false
+      document.removeEventListener('keydown', handleKeydown)
     }
   }
 )
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeydown)
+})
+
+function handleKeydown(e) {
+  if (!props.visible) return
+  
+  if (e.key === 'Escape') {
+    handleCancel()
+  }
+}
 
 function handleVisibleChange(value) {
   emit('update:visible', value)

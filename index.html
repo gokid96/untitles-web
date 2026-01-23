@@ -23,6 +23,27 @@
     <meta name="description" content="Untitles" />
 
     <title>Untitles</title>
+
+    <!-- 다크모드 깜빡임 방지: Vue 마운트 전에 먼저 적용 -->
+    <script>
+      (function() {
+        const darkMode = localStorage.getItem('darkMode');
+        // 기본값 true (darkMode가 'false'가 아니면 다크모드)
+        if (darkMode !== 'false') {
+          document.documentElement.classList.add('dark-mode');
+        }
+      })();
+    </script>
+
+    <!-- 초기 로딩 시 배경색 깜빡임 방지 -->
+    <style>
+      html {
+        background-color: #0a0a0a;
+      }
+      html:not(.dark-mode) {
+        background-color: #fafafa;
+      }
+    </style>
   </head>
   <body>
     <div id="app"></div>

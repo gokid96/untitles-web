@@ -8,6 +8,7 @@ function transformUser(user) {
     email: user.email,
     loginId: user.loginId,
     nickname: user.nickname,
+    profileImage: user.profileImage,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   }
@@ -20,6 +21,7 @@ function transformLoginResponse(loginResponse) {
     id: loginResponse.userId,
     loginId: loginResponse.loginId,
     nickname: loginResponse.nickname,
+    profileImage: loginResponse.profileImage,
   }
 }
 

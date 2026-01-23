@@ -19,10 +19,21 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     return currentWorkspace.value?.myRole || null
   })
 
+  // 개인 워크스페이스 여부
+  const isPersonalWorkspace = computed(() => {
+    return currentWorkspace.value?.type === 'PERSONAL'
+  })
+
   // 권한 체크
   const isOwner = computed(() => myRole.value === 'OWNER')
   const isAdmin = computed(() => myRole.value === 'OWNER' || myRole.value === 'ADMIN')
   const canEdit = computed(() => myRole.value !== 'VIEWER')
+
+  // 워크스페이스 생성 가능 여부 (TEAM 타입 3개 제한)
+  const canCreateWorkspace = computed(() => {
+    const teamCount = workspaces.value.filter(w => w.type === 'TEAM').length
+    return teamCount < 3
+  })
 
   // 워크스페이스 목록 로드
   async function loadWorkspaces() {
@@ -30,11 +41,6 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       isLoading.value = true
       const response = await workspaceApi.getMyWorkspaces()
       workspaces.value = response.data
-
-      // 워크스페이스가 없으면 기본 워크스페이스 생성
-      if (workspaces.value.length === 0) {
-        await createDefaultWorkspace()
-      }
 
       // 현재 워크스페이스가 없으면 첫 번째 워크스페이스 선택
       if (!currentWorkspaceId.value && workspaces.value.length > 0) {
@@ -47,22 +53,6 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       throw error
     } finally {
       isLoading.value = false
-    }
-  }
-
-  // 기본 워크스페이스 생성
-  async function createDefaultWorkspace() {
-    try {
-      const response = await workspaceApi.createWorkspace({
-        name: '내 노트',
-        description: '개인 워크스페이스'
-      })
-      workspaces.value.push(response.data)
-      currentWorkspaceId.value = response.data.workspaceId
-      return response.data
-    } catch (error) {
-      console.error('Failed to create default workspace:', error)
-      throw error
     }
   }
 
@@ -103,12 +93,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     try {
       await workspaceApi.deleteWorkspace(workspaceId)
       
-      // 마지막 워크스페이스면 먼저 기본 워크스페이스 생성 (깜빡임 방지)
-      if (workspaces.value.length === 1) {
-        await createDefaultWorkspace()
-      }
-      
-      // 그 다음 삭제된 워크스페이스 제거
+      // 삭제된 워크스페이스 제거
       workspaces.value = workspaces.value.filter(w => w.workspaceId !== workspaceId)
       
       // 삭제된 워크스페이스가 현재 워크스페이스면 다른 워크스페이스 선택
@@ -176,12 +161,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     try {
       await workspaceApi.leaveWorkspace(workspaceId)
 
-      // 마지막 워크스페이스면 먼저 기본 워크스페이스 생성 (깜빡임 방지)
-      if (workspaces.value.length === 1) {
-        await createDefaultWorkspace()
-      }
-      
-      // 그 다음 나간 워크스페이스 제거
+      // 나간 워크스페이스 제거
       workspaces.value = workspaces.value.filter(w => w.workspaceId !== workspaceId)
       
       // 나간 워크스페이스가 현재 워크스페이스면 다른 워크스페이스 선택
@@ -210,9 +190,11 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     // computed
     currentWorkspace,
     myRole,
+    isPersonalWorkspace,
     isOwner,
     isAdmin,
     canEdit,
+    canCreateWorkspace,
     // 액션
     loadWorkspaces,
     createWorkspace,

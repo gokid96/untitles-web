@@ -41,7 +41,6 @@ export function getPreview(text, lines = 3) {
 
 // 정렬 함수 (게시글만 정렬, 폴더는 원래 순서 유지)
 function sortNodes(nodes, sortOption) {
-  // 날짜 파싱 헬퍼 함수
   const getTime = (dateValue) => {
     if (!dateValue) return 0
     const date = new Date(dateValue)
@@ -59,7 +58,7 @@ function sortNodes(nodes, sortOption) {
 
   const sortFn = sortFunctions[sortOption] || sortFunctions.name_asc
 
-  // 폴더와 게시글을 분리
+  // 폴더와 게시글 분리
   const folders = nodes.filter(n => n.type === 'folder')
   const posts = nodes.filter(n => n.type === 'post')
 
@@ -70,101 +69,84 @@ function sortNodes(nodes, sortOption) {
   return [...folders, ...sortedPosts]
 }
 
-// 폴더 트리를 계층 구조로 변환 (게시글 포함)
-export function buildFolderTree(folders, parentId = null, posts = [], sortOption = 'name_asc') {
-  console.log('[buildFolderTree] Building tree with folders:', folders.length, 'parentId:', parentId, 'posts:', posts.length, 'sortOption:', sortOption)
+/**
+ * 폴더 트리를 UI용 트리 구조로 변환
+ * - 서버에서 이미 폴더 안에 posts가 포함되어 있음
+ * - children도 서버에서 이미 구성되어 있음
+ *
+ * @param {Array} folders - 서버에서 받은 폴더 목록 (트리 구조, posts 포함)
+ * @param {Array} rootPosts - 폴더 없는 게시글 목록
+ * @param {string} sortOption - 정렬 옵션
+ * @returns {Array} UI용 트리 구조
+ */
+export function buildFolderTree(folders, rootPosts = [], sortOption = 'name_asc') {
 
-  // 중복된 폴더 ID 확인
-  const folderIds = folders.map(f => f.id)
-  const duplicates = folderIds.filter((id, index) => folderIds.indexOf(id) !== index)
-  if (duplicates.length > 0) {
-    console.warn('[buildFolderTree] Duplicate folder IDs found:', duplicates)
+  /**
+   * 폴더를 UI 노드로 변환 (재귀)
+   */
+  function transformFolder(folder) {
+    // 폴더 안의 게시글을 UI 노드로 변환
+    const folderPosts = (folder.posts || []).map((post) => ({
+      key: `post-${post.postId}`,
+      label: post.title || '제목 없음',
+      icon: 'pi pi-file',
+      type: 'post',
+      id: post.postId,
+      data: {
+        postId: post.postId,
+        title: post.title,
+        folderId: folder.folderId,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt
+      },
+      children: [],
+    }))
+
+    // 하위 폴더를 UI 노드로 변환 (재귀)
+    const subFolders = (folder.children || []).map(transformFolder)
+
+    // 정렬 적용 (폴더 먼저, 게시글 나중)
+    const sortedChildren = sortNodes([...subFolders, ...folderPosts], sortOption)
+
+    return {
+      key: `folder-${folder.folderId}`,
+      label: folder.name,
+      icon: 'pi pi-folder',
+      type: 'folder',
+      id: folder.folderId,
+      data: {
+        folderId: folder.folderId,
+        name: folder.name,
+        parentId: folder.parentId,
+        createdAt: folder.createdAt,
+        updatedAt: folder.updatedAt
+      },
+      children: sortedChildren,
+    }
   }
 
-  const tree = folders
-    .filter((folder) => {
-      // parentId가 null일 때는 undefined나 null인 폴더를 모두 매칭
-      return parentId === null
-        ? (folder.parentId === null || folder.parentId === undefined)
-        : folder.parentId === parentId
-    })
-    .map((folder) => {
-      // 해당 폴더에 속한 게시글 찾기
-      const folderPosts = posts
-        .filter((post) => post.folderId === folder.id)
-        .map((post) => ({
-          key: `post-${post.id}`,
-          label: post.title || '제목 없음',
-          icon: 'pi pi-file',
-          type: 'post',
-          id: post.id,
-          data: {
-            postId: post.id,
-            title: post.title,
-            folderId: post.folderId,
-            content: post.content,
-            status: post.status,
-            visibility: post.visibility,
-            createdAt: post.createdAt,
-            updatedAt: post.updatedAt
-          },
-          children: [],
-        }))
+  // 루트 폴더들을 UI 노드로 변환
+  const tree = folders.map(transformFolder)
 
-      // 하위 폴더 재귀적으로 생성
-      const subFolders = buildFolderTree(folders, folder.id, posts, sortOption)
+  // 루트 게시글 (폴더 없는 게시글)을 UI 노드로 변환
+  const orphanPosts = rootPosts.map((post) => ({
+    key: `post-${post.postId}`,
+    label: post.title || '제목 없음',
+    icon: 'pi pi-file',
+    type: 'post',
+    id: post.postId,
+    data: {
+      postId: post.postId,
+      title: post.title,
+      folderId: null,
+      createdAt: post.createdAt,
+      updatedAt: post.updatedAt
+    },
+    children: [],
+  }))
 
-      // children 정렬 적용
-      const sortedChildren = sortNodes([...subFolders, ...folderPosts], sortOption)
-
-      return {
-        key: `folder-${folder.id}`,
-        label: folder.name,
-        icon: 'pi pi-folder',
-        type: 'folder',
-        id: folder.id,
-        data: {
-          folderId: folder.id,
-          name: folder.name,
-          parentId: folder.parentId,
-          hasChildren: folder.hasChildren,
-          createdAt: folder.createdAt,
-          updatedAt: folder.updatedAt
-        },
-        children: sortedChildren,
-      }
-    })
-
-  // 루트 레벨인 경우, 폴더가 없는 게시글 추가
-  if (parentId === null) {
-    const orphanPosts = posts
-      .filter((post) => !post.folderId)
-      .map((post) => ({
-        key: `post-${post.id}`,
-        label: post.title || '제목 없음',
-        icon: 'pi pi-file',
-        type: 'post',
-        id: post.id,
-        data: {
-          postId: post.id,
-          title: post.title,
-          folderId: null,
-          content: post.content,
-          status: post.status,
-          visibility: post.visibility,
-          createdAt: post.createdAt,
-          updatedAt: post.updatedAt
-        },
-        children: [],
-      }))
-
-    console.log('[buildFolderTree] Root tree created with', tree.length, 'folders and', orphanPosts.length, 'orphan posts')
-
-    // 루트 레벨도 정렬 적용
-    return sortNodes([...tree, ...orphanPosts], sortOption)
-  }
-
-  return sortNodes(tree, sortOption)
+  // 루트 레벨 정렬 적용
+  return sortNodes([...tree, ...orphanPosts], sortOption)
 }
 
 // 에러 메시지 추출
@@ -181,7 +163,8 @@ export function getErrorMessage(error) {
 // 디바운스 함수
 export function debounce(func, wait) {
   let timeout
-  return function executedFunction(...args) {
+
+  function executedFunction(...args) {
     const later = () => {
       clearTimeout(timeout)
       func(...args)
@@ -189,4 +172,12 @@ export function debounce(func, wait) {
     clearTimeout(timeout)
     timeout = setTimeout(later, wait)
   }
+
+  // cancel 메서드 추가
+  executedFunction.cancel = () => {
+    clearTimeout(timeout)
+    timeout = null
+  }
+
+  return executedFunction
 }

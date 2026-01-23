@@ -1,65 +1,75 @@
 <template>
   <div class="login-view">
-    <!-- 배경 이미지 -->
-    <div class="background-image"></div>
-    <!-- 어두운 오버레이 -->
-    <div class="background-overlay"></div>
-    <!-- 타이핑 커서 -->
-    <!-- <div class="typing-cursor"></div> -->
-
     <div class="login-container">
-      <Card class="login-card">
-        <template #title>
-          <div class="login-title">
-            <!-- 로고 추가 -->
-            <div class="logo-container">
-              <svg class="logo-icon" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path fill="currentColor"
-                  d="M50 8 C52 30 58 36 80 38 C58 40 52 46 50 68 C48 46 42 40 20 38 C42 36 48 30 50 8 Z" />
-                <path fill="currentColor"
-                  d="M50 50 C51 62 54 65 66 66 C54 67 51 70 50 82 C49 70 46 67 34 66 C46 65 49 62 50 50 Z" />
-                <path fill="currentColor" opacity="0.5"
-                  d="M78 70 C78.5 76 80 77.5 86 78 C80 78.5 78.5 80 78 86 C77.5 80 76 78.5 70 78 C76 77.5 77.5 76 78 70 Z" />
-              </svg>
-              <span class="logo-text">Untitles</span>
-            </div>
-          </div>
-        </template>
+      <!-- 로고 영역 -->
+      <div class="logo-section">
+        <div class="logo-icon">
+          <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path fill="currentColor"
+              d="M50 8 C52 30 58 36 80 38 C58 40 52 46 50 68 C48 46 42 40 20 38 C42 36 48 30 50 8 Z" />
+            <path fill="currentColor"
+              d="M50 50 C51 62 54 65 66 66 C54 67 51 70 50 82 C49 70 46 67 34 66 C46 65 49 62 50 50 Z" />
+            <path fill="currentColor" opacity="0.5"
+              d="M78 70 C78.5 76 80 77.5 86 78 C80 78.5 78.5 80 78 86 C77.5 80 76 78.5 70 78 C76 77.5 77.5 76 78 70 Z" />
+          </svg>
+        </div>
+        <h1 class="logo-text">Untitles</h1>
+        <!-- <p class="logo-tagline">생각을 기록하고, 아이디어를 정리하세요</p> -->
+      </div>
 
-        <template #content>
-          <form @submit.prevent="handleLogin" class="login-form">
-            <div class="field">
-              <InputText id="loginId" v-model="loginId" type="loginId" placeholder="아이디" required autofocus />
-            </div>
+      <!-- 로그인 폼 -->
+      <form @submit.prevent="handleLogin" class="login-form">
+        <div class="form-group">
+          <label for="loginId">아이디</label>
+          <InputText
+            id="loginId"
+            v-model="loginId"
+            placeholder="아이디를 입력하세요"
+            autofocus
+            :class="{ 'p-invalid': errors.loginId }"
+          />
+          <small v-if="errors.loginId" class="error-text">{{ errors.loginId }}</small>
+        </div>
 
-            <div class="field">
-              <Password id="password" v-model="password" placeholder="비밀번호" :feedback="false" required />
-            </div>
-            <div class="loginBtn">
-              <Button type="submit" label="로그인" icon="pi pi-sign-in" severity="primary" :loading="isLoading"
-                class="w-full" />
-            </div>
-          </form>
-        </template>
-      </Card>
-      <div class="register-link">
+        <div class="form-group">
+          <label for="password">비밀번호</label>
+          <Password
+            id="password"
+            v-model="password"
+            placeholder="비밀번호를 입력하세요"
+            :feedback="false"
+            toggleMask
+            :class="{ 'p-invalid': errors.password }"
+          />
+          <small v-if="errors.password" class="error-text">{{ errors.password }}</small>
+        </div>
+
+        <Button
+          type="submit"
+          label="로그인"
+          :loading="isLoading"
+          :disabled="isLoading"
+          class="login-button"
+        />
+      </form>
+
+      <!-- 회원가입 링크 -->
+      <div class="register-section">
         <span>계정이 없으신가요?</span>
-        <router-link to="/register">회원가입</router-link>
+        <router-link to="/register" class="register-link">회원가입</router-link>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
-import Card from 'primevue/card'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Button from 'primevue/button'
 import { useAuthStore } from '@/stores/authStore'
-import { TOAST_MESSAGES } from '@/utils/constants'
 import { getErrorMessage } from '@/utils/helpers'
 
 const router = useRouter()
@@ -69,34 +79,38 @@ const authStore = useAuthStore()
 const loginId = ref('')
 const password = ref('')
 const isLoading = ref(false)
+const errors = reactive({
+  loginId: '',
+  password: ''
+})
+
+function validate() {
+  errors.loginId = ''
+  errors.password = ''
+  let isValid = true
+
+  if (!loginId.value.trim()) {
+    errors.loginId = '아이디를 입력해주세요'
+    isValid = false
+  }
+
+  if (!password.value) {
+    errors.password = '비밀번호를 입력해주세요'
+    isValid = false
+  }
+
+  return isValid
+}
 
 async function handleLogin() {
-  if (!loginId.value || !password.value) {
-    toast.add({
-      severity: 'warn',
-      summary: '입력 오류',
-      detail: '아이디와 비밀번호를 입력해주세요.',
-      life: 3000,
-    })
-    return
-  }
+  if (!validate()) return
 
   isLoading.value = true
 
   try {
     await authStore.login(loginId.value, password.value)
-
-    toast.add({
-      severity: 'success',
-      summary: '로그인 성공',
-      detail: TOAST_MESSAGES.SUCCESS.LOGIN_SUCCESS,
-      life: 3000,
-    })
-
     router.push('/main')
   } catch (error) {
-    console.error('Login error:', error)
-
     toast.add({
       severity: 'error',
       summary: '로그인 실패',
@@ -110,223 +124,184 @@ async function handleLogin() {
 </script>
 
 <style scoped>
-/* 배경 이미지 */
-.background-image {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-image: url('/login-bg.png');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  z-index: 0;
-  filter: blur(2px);
-  transform: scale(1.05);
-}
-
-/* 어두운 오버레이 */
-.background-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 1;
-}
-
-/* 타이핑 커서 */
-/* .typing-cursor {
-  position: fixed;
-  top: 20%;
-  left: 25%;
-  width: 5px;
-  height: 45px;
-  background: #726d6c;
-  z-index: 1;
-  animation: blink 1s infinite;
-  box-shadow: 0 0 10px rgba(245, 197, 24, 0.5);
-} */
-
-@keyframes blink {
-
-  0%,
-  50% {
-    opacity: 1;
-  }
-
-  51%,
-  100% {
-    opacity: 0;
-  }
-}
-
-.login-card {
-  border-radius: 5px;
-  background: rgba(66, 66, 66, 0.25);
-  backdrop-filter: blur(1px);
-}
-
-.login-card :deep(.p-card-body) {
-  padding: 2.5rem 1.5rem 4.5rem 1.5rem;
-}
-
-.login-card :deep(.p-card-title) {
-  padding: 0;
-  margin-bottom: 1.5rem;
-}
-
 .login-view {
-  display: flex;
-  justify-content: center;
-  align-items: center;
   min-height: 100vh;
-  background: #141414;
-  position: relative;
-  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+  padding: 2rem;
 }
 
 .login-container {
   width: 100%;
-  max-width: 500px;
-  padding: 2rem;
-  position: relative;
-  z-index: 2;
+  max-width: 400px;
 }
 
-/* 로고 스타일 */
-.login-title {
-  margin: 0;
-  padding: 0;
-}
-
-.logo-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
+/* 로고 영역 */
+.logo-section {
+  text-align: center;
+  margin-bottom: 3rem;
 }
 
 .logo-icon {
-  width: 70px;
-  height: 70px;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 0rem;
   color: #ffffff;
+  opacity: 0.9;
+}
+
+.logo-icon svg {
+  width: 100%;
+  height: 100%;
 }
 
 .logo-text {
-  font-size: 1.5rem;
+  font-size: 2rem;
   font-weight: 300;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.10em;
   color: #ffffff;
+  margin: 0 0 0.75rem;
 }
 
+.logo-tagline {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
+}
+
+/* 로그인 폼 */
 .login-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.8rem;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 2rem;
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+.form-group {
+  margin-bottom: 1.5rem;
 }
 
-.field label {
+.form-group label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 0.5rem;
+}
+
+.form-group :deep(.p-inputtext),
+.form-group :deep(.p-password input) {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+.form-group :deep(.p-inputtext:hover),
+.form-group :deep(.p-password input:hover) {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.form-group :deep(.p-inputtext:focus),
+.form-group :deep(.p-password input:focus) {
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05);
+  outline: none;
+}
+
+.form-group :deep(.p-inputtext::placeholder),
+.form-group :deep(.p-password input::placeholder) {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.form-group :deep(.p-inputtext.p-invalid),
+.form-group :deep(.p-password input.p-invalid) {
+  border-color: #ef4444;
+}
+
+.form-group :deep(.p-password) {
+  width: 100%;
+}
+
+.form-group :deep(.p-password-toggle-icon) {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.error-text {
+  display: block;
+  color: #ef4444;
+  font-size: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+/* 로그인 버튼 */
+.login-button {
+  width: 100%;
+  padding: 0.875rem;
+  margin-top: 0.5rem;
+  background: #ffffff;
+  border: none;
+  border-radius: 8px;
+  color: #0a0a0a;
+  font-size: 1rem;
   font-weight: 600;
-  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.field :deep(.p-inputtext) {
-  background: rgba(51, 51, 51, 0.9);
-  border: 1px solid rgba(128, 128, 128, 0.5);
-  color: #fff;
-  padding: 1rem;
-  font-size: 1rem;
-  border-radius: 4px;
+.login-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.9);
+  transform: translateY(-1px);
 }
 
-.field :deep(.p-inputtext:focus) {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(var(--primary-color-rgb), 0.2);
+.login-button:active:not(:disabled) {
+  transform: translateY(0);
 }
 
-.field :deep(.p-inputtext::placeholder) {
-  color: #8c8c8c;
+.login-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
-.field :deep(.p-password) {
-  width: 100%;
-}
-
-.field :deep(.p-password input) {
-  width: 100%;
-  background: rgba(51, 51, 51, 0.9);
-  border: 1px solid rgba(128, 128, 128, 0.5);
-  color: #fff;
-  padding: 1rem;
-  font-size: 1rem;
-  border-radius: 4px;
-}
-
-.field :deep(.p-password input:focus) {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(var(--primary-color-rgb), 0.2);
-}
-
-.field :deep(.p-password input::placeholder) {
-  color: #8c8c8c;
-}
-
-.loginBtn {
-  margin-top: 2.25rem;
-}
-
-.loginBtn :deep(.p-button) {
-  font-weight: 700;
-  padding: 0.875rem 1.5rem;
-  font-size: 1rem;
+/* 회원가입 링크 */
+.register-section {
+  text-align: center;
+  margin-top: 2rem;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .register-link {
-  text-align: center;
-  display: flex;
-  gap: 0.5rem;
-  justify-content: center;
-  align-items: center;
-  color: #8c8c8c;
-  margin-top: 1.875rem;
-}
-
-.register-link a {
-  color: #fff;
+  color: #ffffff;
   text-decoration: none;
-  font-weight: 600;
+  font-weight: 500;
+  margin-left: 0.5rem;
+  transition: opacity 0.2s;
 }
 
-.register-link a:hover {
-  text-decoration: underline;
-}
-
-.w-full {
-  width: 100%;
+.register-link:hover {
+  opacity: 0.8;
 }
 
 /* 반응형 */
-@media (max-width: 768px) {
+@media (max-width: 480px) {
   .login-container {
-    padding: 1rem;
+    max-width: 100%;
   }
 
-  .logo-icon {
-    width: 60px;
-    height: 60px;
+  .login-form {
+    padding: 1.5rem;
   }
 
   .logo-text {
-    font-size: 1.2rem;
+    font-size: 1.75rem;
   }
 }
 </style>

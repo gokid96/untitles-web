@@ -2,19 +2,12 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 export const useUiStore = defineStore('ui', () => {
-  // 다크모드 상태
+  // 다크모드 상태 (index.html에서 이미 클래스 적용됨)
   const isDarkMode = ref(localStorage.getItem('darkMode') !== 'false')
 
   // 다크모드 토글
   function toggleDarkMode() {
-    isDarkMode.value = !isDarkMode.value
-    localStorage.setItem('darkMode', isDarkMode.value.toString())
-
-    if (isDarkMode.value) {
-      document.documentElement.classList.add('dark-mode')
-    } else {
-      document.documentElement.classList.remove('dark-mode')
-    }
+    setDarkMode(!isDarkMode.value)
   }
 
   // 다크모드 설정
@@ -39,10 +32,8 @@ export const useUiStore = defineStore('ui', () => {
     setDarkMode(false)
   }
 
-  // 초기화 시 다크모드 클래스 적용
-  if (isDarkMode.value) {
-    document.documentElement.classList.add('dark-mode')
-  }
+  // 주의: 초기화 시 클래스 적용 제거
+  // index.html에서 이미 적용되므로 여기서 중복 적용하지 않음
 
   return {
     isDarkMode,

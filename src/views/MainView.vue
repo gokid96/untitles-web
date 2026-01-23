@@ -1,61 +1,114 @@
 <template>
-  <div class="main-view">
-    <!-- <AppHeader /> -->
-    <!-- <Splitter style="height: calc(100vh - 60px)"> -->
-    <!-- 헤더 없을 때 -->
-    <Splitter style="height: 100vh">
-      <SplitterPanel :size="20" :minSize="15" :maxSize="30">
-        <FolderSidebar @folder-selected="handleFolderSelected" @create-folder="handleCreateFolder"
-          @edit-folder="handleEditFolder" @delete-folder="handleDeleteFolder" @create-post="handleCreatePost"
-          @create-post-in-folder="handleCreatePostInFolder" @post-selected="handlePostSelected"
-          @edit-post="handleEditPost" @delete-post="handleDeletePost" @move-post="handleMovePost"
-          @move-folder="handleMoveFolder" />
-      </SplitterPanel>
+  <div class="main-layout">
+    <!-- 사이드바 -->
+    <aside 
+      class="sidebar" 
+      :class="{ collapsed: isSidebarCollapsed }"
+      :style="{ width: isSidebarCollapsed ? '0px' : sidebarWidth + 'px' }"
+    >
+      <FolderSidebar 
+        @folder-selected="handleFolderSelected" 
+        @create-folder="handleCreateFolder"
+        @edit-folder="handleEditFolder" 
+        @delete-folder="handleDeleteFolder" 
+        @create-post="handleCreatePost"
+        @create-post-in-folder="handleCreatePostInFolder" 
+        @post-selected="handlePostSelected"
+        @edit-post="handleEditPost" 
+        @delete-post="handleDeletePost" 
+        @move-post="handleMovePost"
+        @move-folder="handleMoveFolder" 
+      />
+    </aside>
 
-      <SplitterPanel :size="80">
-        <EmptyContent v-if="contentMode === 'empty'" @create-post="handleCreatePost" />
-        <PostViewer v-else-if="contentMode === 'view'" :post="selectedPost" @edit="handleEditPost"
-          @delete="handleDeletePost" />
-        <PostEditor v-else-if="contentMode === 'edit' || contentMode === 'create'" :post="selectedPostForEdit"
-          @save="handleSavePost" @cancel="handleCancelEdit" />
-      </SplitterPanel>
-    </Splitter>
+    <!-- 리사이즈 핸들 -->
+    <div 
+      v-if="!isSidebarCollapsed"
+      class="resize-handle"
+      :style="{ left: sidebarWidth + 'px' }"
+      @mousedown="startResize"
+    ></div>
 
-    <!-- 폴더 모달 -->
-    <FolderModal v-model:visible="isFolderModalOpen" :folder="selectedFolderForEdit" :parentId="parentFolderId"
-      @save="handleSaveFolder" />
+    <!-- 사이드바 토글 버튼 -->
+    <button 
+      class="sidebar-toggle" 
+      :style="{ left: isSidebarCollapsed ? '0px' : sidebarWidth + 'px' }"
+      @click="toggleSidebar" 
+      :title="isSidebarCollapsed ? '사이드바 열기' : '사이드바 닫기'"
+    >
+      <i :class="isSidebarCollapsed ? 'pi pi-chevron-right' : 'pi pi-chevron-left'"></i>
+    </button>
 
-    <!-- 삭제 확인 다이얼로그 -->
-    <ConfirmDialog v-model:visible="isConfirmDialogOpen" :header="confirmDialogHeader" :message="confirmDialogMessage"
-      @confirm="handleConfirmDelete" />
+    <!-- 메인 컨텐츠 -->
+    <main class="main-content">
+      <EditorSkeleton v-if="isLoadingPost" />
+      <EmptyContent v-else-if="contentMode === 'empty'" @create-post="handleCreatePost" />
+      <PostEditor 
+        v-else-if="contentMode === 'edit' || contentMode === 'create'" 
+        :post="currentPostForEditor"
+        @cancel="handleCancelEdit" 
+      />
+    </main>
+
+    <!-- 모달들: 필요할 때만 렌더링 (lazy) -->
+    <FolderModal 
+      v-if="isFolderModalOpen"
+      v-model:visible="isFolderModalOpen" 
+      :folder="selectedFolderForEdit" 
+      :parentId="parentFolderId"
+      @save="handleSaveFolder" 
+    />
+
+    <ConfirmDialog 
+      v-if="isConfirmDialogOpen"
+      v-model:visible="isConfirmDialogOpen" 
+      :message="confirmDialogMessage"
+      @confirm="handleConfirmDelete" 
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, defineAsyncComponent, onMounted, onUnmounted } from 'vue'
 import { useToast } from 'primevue/usetoast'
-import Splitter from 'primevue/splitter'
-import SplitterPanel from 'primevue/splitterpanel'
-import AppHeader from '@/components/layout/AppHeader.vue'
 import FolderSidebar from '@/components/layout/FolderSidebar.vue'
 import EmptyContent from '@/components/editor/EmptyContent.vue'
-import PostViewer from '@/components/editor/PostViewer.vue'
 import PostEditor from '@/components/editor/PostEditor.vue'
-import FolderModal from '@/components/modals/FolderModal.vue'
-import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
-import { useAuthStore } from '@/stores/authStore'
+import EditorSkeleton from '@/components/common/EditorSkeleton.vue'
 import { useFolderStore } from '@/stores/folderStore'
 import { usePostStore } from '@/stores/postStore'
-import { TOAST_MESSAGES } from '@/utils/constants'
+import { useAuthenticatedAction, useSidebarResize } from '@/composables'
 import { getErrorMessage } from '@/utils/helpers'
 
+// 모달 컴포넌트 lazy loading
+const FolderModal = defineAsyncComponent(() => 
+  import('@/components/modals/FolderModal.vue')
+)
+const ConfirmDialog = defineAsyncComponent(() => 
+  import('@/components/common/ConfirmDialog.vue')
+)
+
 const toast = useToast()
-const authStore = useAuthStore()
 const folderStore = useFolderStore()
 const postStore = usePostStore()
 
-// 컨텐츠 모드 상태
+// 컴포저블 사용
+const { executeAuthenticated } = useAuthenticatedAction()
+const { 
+  sidebarWidth, 
+  isSidebarCollapsed, 
+  startResize, 
+  toggleSidebar 
+} = useSidebarResize({
+  minWidth: 200,
+  maxWidth: 500,
+  defaultWidth: 280,
+  storageKey: 'sidebarWidth'
+})
+
+// 컨텐츠 모드
 const contentMode = ref('empty')
+const isLoadingPost = ref(false)
 
 // 모달 상태
 const isFolderModalOpen = ref(false)
@@ -63,50 +116,34 @@ const isConfirmDialogOpen = ref(false)
 
 // 선택된 항목
 const selectedFolderForEdit = ref(null)
-const selectedPostForEdit = ref(null)
-const selectedPost = ref(null)
 const parentFolderId = ref(null)
 
 // 삭제 확인
-//const confirmDialogHeader = ref('삭제 확인')
-const confirmDialogMessage = ref('정말 삭제하시겠습니까?')
+const confirmDialogMessage = ref('')
 const deleteTarget = ref(null)
 const deleteType = ref(null)
 
-onMounted(async () => {
-  await authStore.loadUserFromStorage()
+// postStore.currentPost를 에디터용 형식으로 변환
+const currentPostForEditor = computed(() => {
+  const post = postStore.currentPost
+  if (!post) return null
+  return {
+    id: post.id,
+    title: post.title || '무제',
+    content: post.content || '',
+    version: post.version,
+    folderId: post.folderId,
+    createdAt: post.createdAt,
+    updatedAt: post.updatedAt
+  }
 })
 
-// 폴더 생성 (JWT 인증 사용)
+// 폴더 이벤트
 async function handleCreateFolder(parentId) {
-  if (!authStore.isAuthenticated) {
-    console.error('Not authenticated!')
-    return
-  }
-
-  try {
-    const newFolder = await folderStore.createFolder({
-      name: '무제',
-      parentId: parentId  // null이면 루트, 값 있으면 하위 폴더
-    })
-
-    console.log('생성된 폴더:', newFolder)
-
-    // toast.add({
-    //   severity: 'success',
-    //   summary: '폴더 생성',
-    //   detail: '새 폴더가 생성되었습니다.',
-    //   life: 2000,
-    // })
-  } catch (error) {
-    console.error('Failed to create folder:', error)
-    toast.add({
-      severity: 'error',
-      summary: '생성 실패',
-      detail: getErrorMessage(error),
-      life: 3000,
-    })
-  }
+  await executeAuthenticated(
+    () => folderStore.createFolder({ name: '새 폴더', parentId }),
+    { errorTitle: '폴더 생성 실패' }
+  )
 }
 
 function handleEditFolder(folder) {
@@ -118,332 +155,219 @@ function handleEditFolder(folder) {
 function handleDeleteFolder(folder) {
   deleteTarget.value = folder
   deleteType.value = 'folder'
-  //confirmDialogHeader.value = '폴더 삭제'
-  confirmDialogMessage.value = `폴더를 삭제하시겠습니까? 하위 폴더와 게시글도 함께 삭제됩니다.`
+  confirmDialogMessage.value = '폴더를 삭제하시겠습니까?\n하위 폴더와 게시글도 함께 삭제됩니다.'
   isConfirmDialogOpen.value = true
 }
 
 async function handleSaveFolder(data) {
-  if (!authStore.isAuthenticated) return
+  const action = selectedFolderForEdit.value
+    ? () => folderStore.updateFolder(data.id, { name: data.name })
+    : () => folderStore.createFolder(data)
 
+  await executeAuthenticated(action, { errorTitle: '폴더 저장 실패' })
+}
+
+async function handleMoveFolder(folderId, targetFolderId) {
+  await executeAuthenticated(
+    () => folderStore.moveFolder(folderId, targetFolderId),
+    { errorTitle: '폴더 이동 실패' }
+  )
+}
+
+// 게시글 이벤트
+async function handlePostSelected(post) {
+  isLoadingPost.value = true
+  contentMode.value = 'edit'
+  
   try {
-    if (selectedFolderForEdit.value) {
-      // 수정
-      await folderStore.updateFolder(data.id, { name: data.name })
-      toast.add({
-        severity: 'success',
-        summary: '폴더 수정',
-        detail: TOAST_MESSAGES.SUCCESS.FOLDER_UPDATED,
-        life: 3000,
-      })
-    } else {
-      // 생성
-      await folderStore.createFolder(data)
-      toast.add({
-        severity: 'success',
-        summary: '폴더 생성',
-        detail: TOAST_MESSAGES.SUCCESS.FOLDER_CREATED,
-        life: 3000,
-      })
-    }
+    const postId = post.data?.postId || post.id
+    await postStore.getPostById(postId)
   } catch (error) {
-    console.error('Folder save error:', error)
     toast.add({
       severity: 'error',
-      summary: '폴더 저장 실패',
+      summary: '노트 불러오기 실패',
       detail: getErrorMessage(error),
       life: 3000,
     })
+    contentMode.value = 'empty'
+  } finally {
+    isLoadingPost.value = false
   }
-}
-
-// 게시글 이벤트 핸들러
-function handlePostSelected(post) {
-  console.log('[MainView] handlePostSelected - 받은 TreeNode:', post)
-
-  const postData = {
-    id: post.data.postId || post.id,
-    title: post.data.title || post.label || '무제',
-    content: post.data.content || '',
-    folderId: post.data.folderId,
-    status: post.data.status,
-    visibility: post.data.visibility,
-    createdAt: post.data.createdAt,
-    updatedAt: post.data.updatedAt
-  }
-
-  console.log('[MainView] handlePostSelected - 추출된 postData:', postData)
-
-  selectedPostForEdit.value = postData
-  selectedPost.value = null
-  postStore.setCurrentPost(postData)
-  contentMode.value = 'edit'
 }
 
 async function handleCreatePost() {
-  if (!authStore.isAuthenticated) {
-    console.error('Not authenticated!')
-    return
-  }
-
-  try {
-    const newPost = await postStore.createPost({
+  const result = await executeAuthenticated(
+    () => postStore.createPost({
       title: '무제',
       content: '',
       folderId: null,
-      status: 'DRAFT',
-      visibility: 'PRIVATE',
-    })
+    }),
+    { errorTitle: '노트 생성 실패' }
+  )
 
-    folderStore.updateFolderTree()
-
-    selectedPostForEdit.value = newPost
-    selectedPost.value = null
+  if (result.success) {
     contentMode.value = 'edit'
-
-    // toast.add({
-    //   severity: 'success',
-    //   summary: '새 글 생성',
-    //   detail: '새 글이 생성되었습니다.',
-    //   life: 2000,
-    // })
-  } catch (error) {
-    console.error('Failed to create post:', error)
-    toast.add({
-      severity: 'error',
-      summary: '생성 실패',
-      detail: getErrorMessage(error),
-      life: 3000,
-    })
   }
 }
 
 async function handleCreatePostInFolder(folderId) {
-  if (!authStore.isAuthenticated) {
-    console.error('Not authenticated!')
-    return
-  }
-
-  try {
-    const newPost = await postStore.createPost({
+  const result = await executeAuthenticated(
+    () => postStore.createPost({
       title: '무제',
       content: '',
       folderId: folderId,
-      status: 'DRAFT',
-      visibility: 'PRIVATE',
-    })
+    }),
+    { errorTitle: '노트 생성 실패' }
+  )
 
-    folderStore.updateFolderTree()
-
-    selectedPostForEdit.value = newPost
-    selectedPost.value = null
+  if (result.success) {
     contentMode.value = 'edit'
-
-    toast.add({
-      severity: 'success',
-      summary: '새 글 생성',
-      detail: '폴더에 새 글이 생성되었습니다.',
-      life: 2000,
-    })
-  } catch (error) {
-    console.error('Failed to create post in folder:', error)
-    toast.add({
-      severity: 'error',
-      summary: '생성 실패',
-      detail: getErrorMessage(error),
-      life: 3000,
-    })
   }
 }
 
 function handleEditPost(post) {
-  console.log('[MainView] handleEditPost - 받은 TreeNode:', post)
-
-  const postData = {
-    id: post.data.postId || post.id,
-    title: post.data.title || post.label || '무제',
-    content: post.data.content || '',
-    folderId: post.data.folderId,
-    status: post.data.status,
-    visibility: post.data.visibility,
-    createdAt: post.data.createdAt,
-    updatedAt: post.data.updatedAt
-  }
-
-  console.log('[MainView] handleEditPost - 추출된 postData:', postData)
-
-  selectedPostForEdit.value = postData
-  selectedPost.value = null
-  contentMode.value = 'edit'
+  handlePostSelected(post)
 }
 
 function handleCancelEdit() {
   contentMode.value = 'empty'
-  selectedPostForEdit.value = null
-  selectedPost.value = null
+  postStore.clearCurrentPost()
 }
 
 function handleDeletePost(post) {
   deleteTarget.value = post
   deleteType.value = 'post'
-  confirmDialogMessage.value = `게시글을 삭제하시겠습니까?`
+  confirmDialogMessage.value = '노트를 삭제하시겠습니까?'
   isConfirmDialogOpen.value = true
 }
 
-async function handleSavePost(data) {
-  if (!authStore.isAuthenticated) {
-    console.error('Not authenticated!')
-    return
-  }
-
-  const silent = data.silent || false
-  console.log('MainView - handleSavePost called with data:', data, 'silent:', silent)
-
-  try {
-    if (data.id) {
-      console.log('MainView - Auto-saving post:', data.id)
-
-      const saveData = { ...data }
-      delete saveData.silent
-
-      await postStore.updatePost(data.id, saveData)
-
-      if (!silent) {
-        toast.add({
-          severity: 'success',
-          summary: '게시글 저장',
-          detail: TOAST_MESSAGES.SUCCESS.POST_UPDATED,
-          life: 2000,
-        })
-      }
-    } else {
-      console.log('MainView - Creating new post (fallback)')
-
-      const saveData = { ...data }
-      delete saveData.silent
-
-      await postStore.createPost(saveData)
-      toast.add({
-        severity: 'success',
-        summary: '게시글 작성',
-        detail: TOAST_MESSAGES.SUCCESS.POST_CREATED,
-        life: 2000,
-      })
-    }
-
-    folderStore.updateFolderTree()
-  } catch (error) {
-    console.error('Post save error:', error)
-    toast.add({
-      severity: 'error',
-      summary: '게시글 저장 실패',
-      detail: getErrorMessage(error),
-      life: 3000,
-    })
-  }
-}
-
-async function handleMoveFolder(folderId, targetFolderId) {
-  console.log('=== MainView handleMoveFolder ===')
-  console.log('folderId:', folderId)
-  console.log('targetFolderId:', targetFolderId)
-
-  try {
-    await folderStore.moveFolder(folderId, targetFolderId)
-    console.log('폴더 이동 완료')
-  } catch (error) {
-    console.error('폴더 이동 실패:', error)
-  }
-}
-
 async function handleMovePost(postId, targetFolderId) {
-  console.log('=== MainView handleMovePost 시작 ===')
-  console.log('postId:', postId, 'targetFolderId:', targetFolderId)
-
-  if (!authStore.isAuthenticated) {
-    console.warn('Not authenticated')
-    return
-  }
-
-  try {
-    const post = postStore.posts.find(p => p.id === postId)
-
-    if (!post) {
-      console.warn('Post not found')
-      return
-    }
-
-    const updatedPost = await postStore.movePost(postId, targetFolderId)
-    console.log('이동 성공:', updatedPost)
-
-    folderStore.updateFolderTree()
-
-    toast.add({
-      severity: 'success',
-      summary: '이동 완료',
-      detail: '게시글이 이동되었습니다.',
-      life: 3000,
-    })
-  } catch (error) {
-    console.error('Move post error:', error)
-    toast.add({
-      severity: 'error',
-      summary: '이동 실패',
-      detail: getErrorMessage(error),
-      life: 3000,
-    })
-  }
+  await executeAuthenticated(
+    () => postStore.movePost(postId, targetFolderId),
+    { errorTitle: '이동 실패' }
+  )
 }
 
 async function handleConfirmDelete() {
-  if (!authStore.isAuthenticated) return
+  const isFolder = deleteType.value === 'folder'
+  
+  const result = await executeAuthenticated(
+    async () => {
+      if (isFolder) {
+        await folderStore.deleteFolder(deleteTarget.value.id)
+      } else {
+        await postStore.deletePost(deleteTarget.value.id)
+      }
+    },
+    { errorTitle: '삭제 실패' }
+  )
 
-  try {
-    if (deleteType.value === 'folder') {
-      await folderStore.deleteFolder(deleteTarget.value.id)
-      toast.add({
-        severity: 'success',
-        summary: '폴더 삭제',
-        detail: TOAST_MESSAGES.SUCCESS.FOLDER_DELETED,
-        life: 3000,
-      })
-    } else if (deleteType.value === 'post') {
-      await postStore.deletePost(deleteTarget.value.id)
-
-      folderStore.updateFolderTree()
-
-      toast.add({
-        severity: 'success',
-        summary: '게시글 삭제',
-        detail: TOAST_MESSAGES.SUCCESS.POST_DELETED,
-        life: 3000,
-      })
-
+  if (result.success) {
+    if (!isFolder) {
       contentMode.value = 'empty'
-      selectedPost.value = null
-      selectedPostForEdit.value = null
     }
-  } catch (error) {
-    console.error('Delete error:', error)
     toast.add({
-      severity: 'error',
-      summary: '삭제 실패',
-      detail: getErrorMessage(error),
-      life: 3000,
+      severity: 'success',
+      summary: '삭제 완료',
+      detail: isFolder ? '폴더가 삭제되었습니다' : '노트가 삭제되었습니다',
+      life: 2000,
     })
   }
 }
 
 function handleFolderSelected(folder) {
-  // 폴더 선택 처리
-  console.log('Folder selected:', folder)
+  // 폴더 선택 시 처리
 }
+
+// 전역 단축키
+function handleGlobalKeydown(e) {
+  // Ctrl + Q: 새 노트
+  if ((e.ctrlKey || e.metaKey) && e.key === 'q') {
+    e.preventDefault()
+    handleCreatePost()
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', handleGlobalKeydown)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleGlobalKeydown)
+})
 </script>
 
 <style scoped>
-.main-view {
-  width: 100%;
+.main-layout {
+  display: flex;
   height: 100vh;
+  background-color: var(--surface-ground);
   overflow: hidden;
+  position: relative;
+}
+
+.sidebar {
+  height: 100%;
+  background-color: var(--surface-card);
+  border-right: 1px solid var(--surface-border);
+  transition: width 0.2s ease;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.sidebar.collapsed {
+  width: 0 !important;
+  border-right: none;
+}
+
+.resize-handle {
+  position: absolute;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  background: transparent;
+  z-index: 101;
+  transition: background-color 0.15s;
+}
+
+.resize-handle:hover {
+  background-color: var(--primary-color);
+}
+
+.sidebar-toggle {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 100;
+  width: 24px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+  cursor: pointer;
+  color: var(--text-color-secondary);
+  transition: left 0.2s ease, opacity 0.15s;
+  opacity: 0;
+}
+
+.main-layout:hover .sidebar-toggle {
+  opacity: 1;
+}
+
+.sidebar-toggle:hover {
+  background: var(--surface-hover);
+  color: var(--text-color);
+}
+
+.main-content {
+  flex: 1;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--surface-ground);
 }
 </style>

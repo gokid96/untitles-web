@@ -2,15 +2,14 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { folderApi } from '@/api/folderApi'
 import { buildFolderTree } from '@/utils/helpers'
-import { usePostStore } from './postStore'
 import { useWorkspaceStore } from './workspaceStore'
 
 export const useFolderStore = defineStore('folder', () => {
   // 상태
-  const folders = ref([])
+  const folders = ref([])       // 폴더 목록 (트리 구조, posts 포함)
+  const rootPosts = ref([])     // 폴더 없는 게시글
   const selectedFolderId = ref(null)
-  const rootFolders = ref([])
-  const folderTree = ref([])
+  const folderTree = ref([])    // UI용 트리 구조
   const sortOption = ref('name_asc')
 
   // 워크스페이스 스토어
@@ -18,70 +17,38 @@ export const useFolderStore = defineStore('folder', () => {
 
   // 선택된 폴더
   const selectedFolder = computed(() => {
-    return folders.value.find((f) => f.id === selectedFolderId.value) || null
+    function findFolder(folderList, id) {
+      for (const folder of folderList) {
+        if (folder.folderId === id) return folder
+        if (folder.children?.length > 0) {
+          const found = findFolder(folder.children, id)
+          if (found) return found
+        }
+      }
+      return null
+    }
+    return findFolder(folders.value, selectedFolderId.value)
   })
 
-  // 폴더 트리 업데이트 함수
+  /**
+   * 폴더 트리 업데이트 (UI용 트리 구조 생성)
+   */
   function updateFolderTree() {
-    const postStore = usePostStore()
-    folderTree.value = buildFolderTree(folders.value, null, postStore.posts, sortOption.value)
+    folderTree.value = buildFolderTree(folders.value, rootPosts.value, sortOption.value)
   }
 
-  // 정렬 옵션 설정 함수
+  /**
+   * 정렬 옵션 설정
+   */
   function setSortOption(option) {
     sortOption.value = option
     updateFolderTree()
   }
 
-  // 루트 폴더 목록 조회
-  async function fetchRootFolders() {
-    const workspaceId = workspaceStore.currentWorkspaceId
-    if (!workspaceId) {
-      console.warn('No workspace selected')
-      return []
-    }
-
-    try {
-      const response = await folderApi.getRootFolders(workspaceId)
-      rootFolders.value = response.data
-      folders.value = response.data
-      return response.data
-    } catch (error) {
-      console.error('Failed to fetch root folders:', error)
-      throw error
-    }
-  }
-
-  // 하위 폴더 목록 조회
-  async function fetchChildFolders(folderId) {
-    const workspaceId = workspaceStore.currentWorkspaceId
-    if (!workspaceId) {
-      console.warn('No workspace selected')
-      return []
-    }
-
-    try {
-      const response = await folderApi.getChildFolders(workspaceId, folderId)
-      const childFolders = response.data
-
-      childFolders.forEach((child) => {
-        const existingIndex = folders.value.findIndex((f) => f.id === child.id)
-        if (existingIndex === -1) {
-          folders.value.push(child)
-        } else {
-          folders.value[existingIndex] = child
-        }
-      })
-
-      return childFolders
-    } catch (error) {
-      console.error('Failed to fetch child folders:', error)
-      throw error
-    }
-  }
-
-  // 모든 폴더 재귀적으로 로드
-  async function loadAllFolders() {
+  /**
+   * 워크스페이스 트리 로드 (폴더 + 게시글 한 번에)
+   */
+  async function loadWorkspaceTree() {
     const workspaceId = workspaceStore.currentWorkspaceId
     if (!workspaceId) {
       console.warn('No workspace selected')
@@ -89,31 +56,121 @@ export const useFolderStore = defineStore('folder', () => {
     }
 
     try {
-      await fetchRootFolders()
-
-      const loadChildren = async (folderId) => {
-        const children = await fetchChildFolders(folderId)
-        for (const child of children) {
-          if (child.hasChildren) {
-            await loadChildren(child.id)
-          }
-        }
-      }
-
-      for (const folder of rootFolders.value) {
-        if (folder.hasChildren) {
-          await loadChildren(folder.id)
-        }
-      }
-
+      const response = await folderApi.getWorkspaceTree(workspaceId)
+      folders.value = response.data.folders
+      rootPosts.value = response.data.rootPosts
       updateFolderTree()
     } catch (error) {
-      console.error('Failed to load all folders:', error)
+      console.error('Failed to load workspace tree:', error)
       throw error
     }
   }
 
-  // 폴더 생성
+  // ========== 헬퍼 함수들 ==========
+
+  /**
+   * 폴더 목록에서 특정 폴더 찾기 (재귀)
+   */
+  function findFolderInList(folderList, folderId) {
+    for (const folder of folderList) {
+      if (folder.folderId === folderId) return folder
+      if (folder.children?.length > 0) {
+        const found = findFolderInList(folder.children, folderId)
+        if (found) return found
+      }
+    }
+    return null
+  }
+
+  /**
+   * 폴더 목록에서 특정 폴더 제거 (재귀)
+   */
+  function removeFolderFromList(folderList, folderId) {
+    const index = folderList.findIndex(f => f.folderId === folderId)
+    if (index !== -1) {
+      folderList.splice(index, 1)
+      return true
+    }
+    for (const folder of folderList) {
+      if (folder.children?.length > 0) {
+        if (removeFolderFromList(folder.children, folderId)) return true
+      }
+    }
+    return false
+  }
+
+  /**
+   * 폴더 목록에서 특정 폴더 업데이트 (재귀)
+   */
+  function updateFolderInList(folderList, folderId, updates) {
+    for (const folder of folderList) {
+      if (folder.folderId === folderId) {
+        Object.assign(folder, updates)
+        return true
+      }
+      if (folder.children?.length > 0) {
+        if (updateFolderInList(folder.children, folderId, updates)) return true
+      }
+    }
+    return false
+  }
+
+  /**
+   * 게시글을 폴더에서 제거 (재귀)
+   */
+  function removePostFromFolders(folderList, postId) {
+    for (const folder of folderList) {
+      if (folder.posts) {
+        const index = folder.posts.findIndex(p => p.postId === postId)
+        if (index !== -1) {
+          folder.posts.splice(index, 1)
+          return true
+        }
+      }
+      if (folder.children?.length > 0) {
+        if (removePostFromFolders(folder.children, postId)) return true
+      }
+    }
+    return false
+  }
+
+  /**
+   * 게시글을 폴더에 추가
+   */
+  function addPostToFolder(folderList, folderId, post) {
+    const folder = findFolderInList(folderList, folderId)
+    if (folder) {
+      if (!folder.posts) folder.posts = []
+      folder.posts.push(post)
+      return true
+    }
+    return false
+  }
+
+  /**
+   * 폴더 내 게시글 업데이트 (재귀)
+   */
+  function updatePostInFolders(folderList, postId, updates) {
+    for (const folder of folderList) {
+      if (folder.posts) {
+        const post = folder.posts.find(p => p.postId === postId)
+        if (post) {
+          Object.assign(post, updates)
+          return true
+        }
+      }
+      if (folder.children?.length > 0) {
+        if (updatePostInFolders(folder.children, postId, updates)) return true
+      }
+    }
+    return false
+  }
+
+  // ========== 폴더 CRUD ==========
+
+  /**
+   * 폴더 생성 (로컬 상태 업데이트)
+   */
   async function createFolder(data) {
     const workspaceId = workspaceStore.currentWorkspaceId
     if (!workspaceId) {
@@ -121,22 +178,20 @@ export const useFolderStore = defineStore('folder', () => {
     }
 
     try {
-      console.log('[FolderStore] Creating folder with data:', data)
       const response = await folderApi.createFolder(workspaceId, data)
       const newFolder = response.data
 
-      console.log('[FolderStore] Created folder:', newFolder)
-
-      const exists = folders.value.find(f => f.id === newFolder.id)
-      if (!exists) {
-        folders.value.push(newFolder)
-      }
-
-      if (!newFolder.parentId) {
-        const rootExists = rootFolders.value.find(f => f.id === newFolder.id)
-        if (!rootExists) {
-          rootFolders.value.push(newFolder)
+      // 로컬 상태 업데이트
+      if (data.parentId) {
+        // 부모 폴더에 추가
+        const parent = findFolderInList(folders.value, data.parentId)
+        if (parent) {
+          if (!parent.children) parent.children = []
+          parent.children.push(newFolder)
         }
+      } else {
+        // 루트에 추가
+        folders.value.push(newFolder)
       }
 
       updateFolderTree()
@@ -147,7 +202,9 @@ export const useFolderStore = defineStore('folder', () => {
     }
   }
 
-  // 폴더 수정
+  /**
+   * 폴더 수정 (로컬 상태 업데이트)
+   */
   async function updateFolder(folderId, data) {
     const workspaceId = workspaceStore.currentWorkspaceId
     if (!workspaceId) {
@@ -158,15 +215,11 @@ export const useFolderStore = defineStore('folder', () => {
       const response = await folderApi.updateFolder(workspaceId, folderId, data)
       const updatedFolder = response.data
 
-      const index = folders.value.findIndex((f) => f.id === folderId)
-      if (index !== -1) {
-        folders.value[index] = updatedFolder
-      }
-
-      const rootIndex = rootFolders.value.findIndex((f) => f.id === folderId)
-      if (rootIndex !== -1) {
-        rootFolders.value[rootIndex] = updatedFolder
-      }
+      // 로컬 상태 업데이트
+      updateFolderInList(folders.value, folderId, {
+        name: updatedFolder.name,
+        updatedAt: updatedFolder.updatedAt
+      })
 
       updateFolderTree()
       return updatedFolder
@@ -176,7 +229,9 @@ export const useFolderStore = defineStore('folder', () => {
     }
   }
 
-  // 폴더 삭제
+  /**
+   * 폴더 삭제 (로컬 상태 업데이트)
+   */
   async function deleteFolder(folderId) {
     const workspaceId = workspaceStore.currentWorkspaceId
     if (!workspaceId) {
@@ -186,14 +241,8 @@ export const useFolderStore = defineStore('folder', () => {
     try {
       await folderApi.deleteFolder(workspaceId, folderId)
 
-      const removeFolder = (id) => {
-        const children = folders.value.filter((f) => f.parentId === id)
-        children.forEach((child) => removeFolder(child.id))
-        folders.value = folders.value.filter((f) => f.id !== id)
-      }
-
-      removeFolder(folderId)
-      rootFolders.value = rootFolders.value.filter((f) => f.id !== folderId)
+      // 로컬 상태 업데이트
+      removeFolderFromList(folders.value, folderId)
 
       if (selectedFolderId.value === folderId) {
         selectedFolderId.value = null
@@ -206,17 +255,9 @@ export const useFolderStore = defineStore('folder', () => {
     }
   }
 
-  // 폴더 선택
-  function selectFolder(folderId) {
-    selectedFolderId.value = folderId
-  }
-
-  // 폴더 선택 해제
-  function clearSelection() {
-    selectedFolderId.value = null
-  }
-
-  // 폴더 이동
+  /**
+   * 폴더 이동 (로컬 상태 업데이트)
+   */
   async function moveFolder(folderId, newParentId) {
     const workspaceId = workspaceStore.currentWorkspaceId
     if (!workspaceId) {
@@ -224,58 +265,202 @@ export const useFolderStore = defineStore('folder', () => {
     }
 
     try {
-      console.log('[FolderStore] moveFolder:', { folderId, newParentId })
       const response = await folderApi.moveFolder(workspaceId, folderId, { parentId: newParentId })
-      const updatedFolder = response.data
+      const movedFolder = response.data
 
-      const index = folders.value.findIndex((f) => f.id === folderId)
-      if (index !== -1) {
-        folders.value[index] = updatedFolder
-      }
+      // 기존 위치에서 제거
+      const folder = findFolderInList(folders.value, folderId)
+      if (folder) {
+        // 폴더 데이터 복사 (children, posts 포함)
+        const folderData = { ...folder }
+        removeFolderFromList(folders.value, folderId)
 
-      if (!updatedFolder.parentId) {
-        const rootExists = rootFolders.value.find(f => f.id === folderId)
-        if (!rootExists) {
-          rootFolders.value.push(updatedFolder)
+        // 새 위치에 추가
+        folderData.parentId = newParentId
+        if (newParentId) {
+          const newParent = findFolderInList(folders.value, newParentId)
+          if (newParent) {
+            if (!newParent.children) newParent.children = []
+            newParent.children.push(folderData)
+          }
+        } else {
+          folders.value.push(folderData)
         }
-      } else {
-        rootFolders.value = rootFolders.value.filter(f => f.id !== folderId)
       }
 
       updateFolderTree()
-      return updatedFolder
+      return movedFolder
     } catch (error) {
-      console.error('[FolderStore] Failed to move folder:', error)
+      console.error('Failed to move folder:', error)
       throw error
     }
   }
 
-  // 폴더 데이터 초기화 (워크스페이스 변경 시)
+  // ========== 게시글 관련 (folderStore에서 트리 업데이트용) ==========
+
+  /**
+   * 게시글 추가 (로컬 상태 업데이트)
+   */
+  function addPostLocally(post) {
+    const postData = {
+      postId: post.id || post.postId,
+      title: post.title,
+      createdAt: post.createdAt,
+      updatedAt: post.updatedAt
+    }
+
+    if (post.folderId) {
+      addPostToFolder(folders.value, post.folderId, postData)
+    } else {
+      rootPosts.value.push(postData)
+    }
+
+    updateFolderTree()
+  }
+
+  /**
+   * 게시글 수정 (로컬 상태 업데이트 - 제목만)
+   */
+  function updatePostLocally(postId, updates) {
+    // rootPosts에서 찾기
+    const rootPost = rootPosts.value.find(p => p.postId === postId)
+    if (rootPost) {
+      Object.assign(rootPost, updates)
+      updateFolderTree()
+      return
+    }
+
+    // folders에서 찾기
+    if (updatePostInFolders(folders.value, postId, updates)) {
+      updateFolderTree()
+    }
+  }
+
+  /**
+   * 게시글 삭제 (로컬 상태 업데이트)
+   */
+  function deletePostLocally(postId) {
+    // rootPosts에서 제거
+    const rootIndex = rootPosts.value.findIndex(p => p.postId === postId)
+    if (rootIndex !== -1) {
+      rootPosts.value.splice(rootIndex, 1)
+      updateFolderTree()
+      return
+    }
+
+    // folders에서 제거
+    if (removePostFromFolders(folders.value, postId)) {
+      updateFolderTree()
+    }
+  }
+
+  /**
+   * 게시글 이동 (로컬 상태 업데이트)
+   */
+  function movePostLocally(postId, newFolderId, postData) {
+    // 기존 위치에서 제거
+    let post = null
+
+    // rootPosts에서 찾기
+    const rootIndex = rootPosts.value.findIndex(p => p.postId === postId)
+    if (rootIndex !== -1) {
+      post = rootPosts.value.splice(rootIndex, 1)[0]
+    } else {
+      // folders에서 찾기 및 제거
+      for (const folder of folders.value) {
+        if (folder.posts) {
+          const idx = folder.posts.findIndex(p => p.postId === postId)
+          if (idx !== -1) {
+            post = folder.posts.splice(idx, 1)[0]
+            break
+          }
+        }
+      }
+      // 재귀적으로 찾기
+      if (!post) {
+        function findAndRemove(folderList) {
+          for (const folder of folderList) {
+            if (folder.posts) {
+              const idx = folder.posts.findIndex(p => p.postId === postId)
+              if (idx !== -1) {
+                return folder.posts.splice(idx, 1)[0]
+              }
+            }
+            if (folder.children?.length > 0) {
+              const found = findAndRemove(folder.children)
+              if (found) return found
+            }
+          }
+          return null
+        }
+        post = findAndRemove(folders.value)
+      }
+    }
+
+    // 새 위치에 추가
+    const postToAdd = post || {
+      postId: postId,
+      title: postData?.title || '무제',
+      createdAt: postData?.createdAt,
+      updatedAt: postData?.updatedAt
+    }
+
+    if (newFolderId) {
+      addPostToFolder(folders.value, newFolderId, postToAdd)
+    } else {
+      rootPosts.value.push(postToAdd)
+    }
+
+    updateFolderTree()
+  }
+
+  /**
+   * 폴더 선택
+   */
+  function selectFolder(folderId) {
+    selectedFolderId.value = folderId
+  }
+
+  /**
+   * 폴더 선택 해제
+   */
+  function clearSelection() {
+    selectedFolderId.value = null
+  }
+
+  /**
+   * 폴더 데이터 초기화 (워크스페이스 변경 시)
+   */
   function clearFolderData() {
     folders.value = []
-    rootFolders.value = []
+    rootPosts.value = []
     folderTree.value = []
     selectedFolderId.value = null
   }
 
   return {
+    // 상태
     folders,
+    rootPosts,
     selectedFolderId,
-    rootFolders,
     folderTree,
     selectedFolder,
     sortOption,
-    fetchRootFolders,
-    fetchChildFolders,
-    loadAllFolders,
+    // 액션
+    loadWorkspaceTree,
     createFolder,
     updateFolder,
     deleteFolder,
+    moveFolder,
     selectFolder,
     clearSelection,
     updateFolderTree,
-    moveFolder,
     setSortOption,
     clearFolderData,
+    // 게시글 로컬 업데이트용
+    addPostLocally,
+    updatePostLocally,
+    deletePostLocally,
+    movePostLocally,
   }
 })

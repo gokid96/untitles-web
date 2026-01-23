@@ -1,50 +1,15 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { postApi } from '@/api/postApi'
 import { useFolderStore } from './folderStore'
 import { useWorkspaceStore } from './workspaceStore'
 
 export const usePostStore = defineStore('post', () => {
   // 상태
-  const posts = ref([])
   const currentPost = ref(null)
-  const pagination = ref({
-    page: 0,
-    size: 20,
-    totalPages: 0,
-    totalElements: 0,
-  })
 
   // 스토어
-  const folderStore = useFolderStore()
   const workspaceStore = useWorkspaceStore()
-
-  // 선택된 폴더의 게시글 필터링
-  const filteredPosts = computed(() => {
-    if (!folderStore.selectedFolderId) {
-      return posts.value
-    }
-    return posts.value.filter((post) => post.folderId === folderStore.selectedFolderId)
-  })
-
-  // 워크스페이스의 게시글 목록 조회
-  async function fetchPosts() {
-    const workspaceId = workspaceStore.currentWorkspaceId
-    if (!workspaceId) {
-      console.warn('No workspace selected')
-      return []
-    }
-
-    try {
-      const response = await postApi.getPosts(workspaceId)
-      posts.value = response.data
-      pagination.value.totalElements = response.data.length
-      return response.data
-    } catch (error) {
-      console.error('Failed to fetch posts:', error)
-      throw error
-    }
-  }
 
   // 게시글 상세 조회
   async function getPostById(postId) {
@@ -63,7 +28,7 @@ export const usePostStore = defineStore('post', () => {
     }
   }
 
-  // 게시글 생성
+  // 게시글 생성 (로컬 상태 업데이트)
   async function createPost(data) {
     const workspaceId = workspaceStore.currentWorkspaceId
     if (!workspaceId) {
@@ -73,9 +38,17 @@ export const usePostStore = defineStore('post', () => {
     try {
       const response = await postApi.createPost(workspaceId, data)
       const newPost = response.data
+      currentPost.value = newPost
 
-      posts.value.unshift(newPost)
-      pagination.value.totalElements += 1
+      // 로컬 상태 업데이트 (API 재호출 대신)
+      const folderStore = useFolderStore()
+      folderStore.addPostLocally({
+        id: newPost.id,
+        title: newPost.title,
+        folderId: newPost.folderId,
+        createdAt: newPost.createdAt,
+        updatedAt: newPost.updatedAt
+      })
 
       return newPost
     } catch (error) {
@@ -84,7 +57,7 @@ export const usePostStore = defineStore('post', () => {
     }
   }
 
-  // 게시글 수정
+  // 게시글 수정 (충돌 시 최신 데이터 반환)
   async function updatePost(postId, data) {
     const workspaceId = workspaceStore.currentWorkspaceId
     if (!workspaceId) {
@@ -94,24 +67,38 @@ export const usePostStore = defineStore('post', () => {
     try {
       const response = await postApi.updatePost(workspaceId, postId, data)
       const updatedPost = response.data
+      currentPost.value = updatedPost
 
-      const index = posts.value.findIndex((p) => p.id === postId)
-      if (index !== -1) {
-        posts.value[index] = updatedPost
+      // 제목이 변경된 경우 로컬 상태 업데이트
+      if (data.title) {
+        const folderStore = useFolderStore()
+        folderStore.updatePostLocally(postId, {
+          title: updatedPost.title,
+          updatedAt: updatedPost.updatedAt
+        })
       }
 
-      if (currentPost.value?.id === postId) {
-        currentPost.value = updatedPost
-      }
-
-      return updatedPost
+      return { success: true, post: updatedPost }
     } catch (error) {
+      // 409 Conflict - 동시 수정 충돌
+      if (error.response?.status === 409) {
+        console.warn('Conflict detected, reloading post...')
+        
+        try {
+          const latestPost = await getPostById(postId)
+          return { success: false, conflict: true, post: latestPost }
+        } catch (reloadError) {
+          console.error('Failed to reload post after conflict:', reloadError)
+          throw reloadError
+        }
+      }
+      
       console.error('Failed to update post:', error)
       throw error
     }
   }
 
-  // 게시글 삭제
+  // 게시글 삭제 (로컬 상태 업데이트)
   async function deletePost(postId) {
     const workspaceId = workspaceStore.currentWorkspaceId
     if (!workspaceId) {
@@ -121,21 +108,17 @@ export const usePostStore = defineStore('post', () => {
     try {
       await postApi.deletePost(workspaceId, postId)
 
-      posts.value = posts.value.filter((p) => p.id !== postId)
-      pagination.value.totalElements = Math.max(0, pagination.value.totalElements - 1)
-
       if (currentPost.value?.id === postId) {
         currentPost.value = null
       }
+
+      // 로컬 상태 업데이트 (API 재호출 대신)
+      const folderStore = useFolderStore()
+      folderStore.deletePostLocally(postId)
     } catch (error) {
       console.error('Failed to delete post:', error)
       throw error
     }
-  }
-
-  // 현재 게시글 설정
-  function setCurrentPost(post) {
-    currentPost.value = post
   }
 
   // 현재 게시글 초기화
@@ -143,7 +126,7 @@ export const usePostStore = defineStore('post', () => {
     currentPost.value = null
   }
 
-  // 게시글 폴더 이동
+  // 게시글 폴더 이동 (로컬 상태 업데이트)
   async function movePost(postId, folderId) {
     const workspaceId = workspaceStore.currentWorkspaceId
     if (!workspaceId) {
@@ -153,15 +136,15 @@ export const usePostStore = defineStore('post', () => {
     try {
       const response = await postApi.movePost(workspaceId, postId, folderId)
       const updatedPost = response.data
+      currentPost.value = updatedPost
 
-      const index = posts.value.findIndex((p) => p.id === postId)
-      if (index !== -1) {
-        posts.value[index] = updatedPost
-      }
-
-      if (currentPost.value?.id === postId) {
-        currentPost.value = updatedPost
-      }
+      // 로컬 상태 업데이트 (API 재호출 대신)
+      const folderStore = useFolderStore()
+      folderStore.movePostLocally(postId, folderId, {
+        title: updatedPost.title,
+        createdAt: updatedPost.createdAt,
+        updatedAt: updatedPost.updatedAt
+      })
 
       return updatedPost
     } catch (error) {
@@ -170,29 +153,17 @@ export const usePostStore = defineStore('post', () => {
     }
   }
 
-  // 게시글 데이터 초기화 (워크스페이스 변경 시)
+  // 게시글 데이터 초기화
   function clearPostData() {
-    posts.value = []
     currentPost.value = null
-    pagination.value = {
-      page: 0,
-      size: 20,
-      totalPages: 0,
-      totalElements: 0,
-    }
   }
 
   return {
-    posts,
     currentPost,
-    pagination,
-    filteredPosts,
-    fetchPosts,
     getPostById,
     createPost,
     updatePost,
     deletePost,
-    setCurrentPost,
     clearCurrentPost,
     movePost,
     clearPostData,
