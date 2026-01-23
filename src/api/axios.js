@@ -13,8 +13,8 @@ const apiClient = axios.create({
   withCredentials: true,
 })
 
-// 401 처리가 필요 없는 경로들 (로그인/회원가입 페이지)
-const AUTH_PAGES = ['/login', '/register']
+// 401 처리가 필요 없는 경로들 (로그인/회원가입/랜딩 페이지)
+const AUTH_PAGES = ['/login', '/register', '/']
 
 // 요청 인터셉터
 apiClient.interceptors.request.use(
