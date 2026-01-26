@@ -60,6 +60,12 @@ export const workspaceApi = {
     const response = await apiClient.post(`/workspaces/${workspaceId}/leave`)
     return response
   },
+
+  // 워크스페이스 생성 제한 정보
+  async getWorkspaceLimit() {
+    const response = await apiClient.get('/workspaces/limit')
+    return response
+  },
 }
 
 export default workspaceApi

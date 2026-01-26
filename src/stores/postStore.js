@@ -50,6 +50,9 @@ export const usePostStore = defineStore('post', () => {
         updatedAt: newPost.updatedAt
       })
 
+      // 워크스페이스 게시글 count 업데이트
+      workspaceStore.updatePostCount(1)
+
       return newPost
     } catch (error) {
       console.error('Failed to create post:', error)
@@ -115,6 +118,9 @@ export const usePostStore = defineStore('post', () => {
       // 로컬 상태 업데이트 (API 재호출 대신)
       const folderStore = useFolderStore()
       folderStore.deletePostLocally(postId)
+
+      // 워크스페이스 게시글 count 업데이트
+      workspaceStore.updatePostCount(-1)
     } catch (error) {
       console.error('Failed to delete post:', error)
       throw error

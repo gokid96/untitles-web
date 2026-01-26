@@ -54,6 +54,8 @@
         :selected-key="selectedKey"
         :editing-key="editingKey"
         :expand-all="expandAll"
+        :dragged-node="draggedNode"
+        :folder-parent-map="folderParentMap"
         @node-click="$emit('node-click', $event)"
         @node-context-menu="$emit('node-context-menu', $event)"
         @node-drag-start="$emit('node-drag-start', $event)"
@@ -84,6 +86,14 @@ const props = defineProps({
   expandAll: {
     type: Boolean,
     default: null,
+  },
+  draggedNode: {
+    type: Object,
+    default: null,
+  },
+  folderParentMap: {
+    type: Map,
+    default: () => new Map(),
   },
 })
 
@@ -143,8 +153,39 @@ function handleDragStart(event) {
   emit('node-drag-start', { node: props.node, event })
 }
 
+// 드롭 가능 여부 확인
+function canDropHere() {
+  if (props.node.type !== 'folder') return false
+  if (!props.draggedNode) return true
+  
+  const targetFolderId = props.node.id
+  
+  // 게시글은 폴더로 이동 가능
+  if (props.draggedNode.type === 'post') return true
+  
+  // 폴더인 경우
+  const draggedFolderId = props.draggedNode.id
+  const currentParentId = props.draggedNode.data?.parentId
+  
+  // 자기 자신
+  if (draggedFolderId === targetFolderId) return false
+  // 이미 같은 부모
+  if (currentParentId === targetFolderId) return false
+  // 하위 폴더인지 확인
+  let currentId = targetFolderId
+  const visited = new Set()
+  while (currentId) {
+    if (visited.has(currentId)) break
+    visited.add(currentId)
+    if (currentId === draggedFolderId) return false
+    currentId = props.folderParentMap.get(currentId)
+  }
+  
+  return true
+}
+
 function handleDragOver(event) {
-  if (props.node.type === 'folder') {
+  if (props.node.type === 'folder' && canDropHere()) {
     isDragOver.value = true
     event.dataTransfer.dropEffect = 'move'
   }

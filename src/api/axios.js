@@ -48,7 +48,6 @@ apiClient.interceptors.response.use(
     }
 
     const { status, data } = error.response
-    const errorMessage = data?.message || '오류가 발생했습니다'
     const currentPath = router.currentRoute.value.path
 
     switch (status) {
@@ -58,29 +57,6 @@ apiClient.interceptors.response.use(
         if (!AUTH_PAGES.includes(currentPath)) {
           appStore.showSessionExpired()
         }
-        // 로그인/회원가입 페이지의 401은 reject만 하고 컴포넌트에서 처리
-        break
-
-      case 403:
-        appStore.setError({
-          message: '접근 권한이 없습니다.',
-          code: 'FORBIDDEN'
-        })
-        break
-
-      case 404:
-        appStore.setError({
-          message: '요청한 리소스를 찾을 수 없습니다.',
-          code: 'NOT_FOUND'
-        })
-        break
-
-      case 422:
-        // 유효성 검사 에러는 각 컴포넌트에서 처리
-        break
-
-      case 409:
-        // 충돌 에러는 PostEditor에서 처리
         break
 
       case 500:
@@ -90,11 +66,10 @@ apiClient.interceptors.response.use(
         })
         break
 
+      // 400, 403, 404, 409, 422 등 비즈니스 에러는 컴포넌트에서 처리
       default:
-        appStore.setError({
-          message: errorMessage,
-          code: `HTTP_${status}`
-        })
+        // 컴포넌트로 전달만 함 (GlobalErrorToast 표시 안 함)
+        break
     }
 
     return Promise.reject(error)

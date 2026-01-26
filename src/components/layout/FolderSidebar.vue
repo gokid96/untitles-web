@@ -62,12 +62,24 @@
           :selected-key="selectedKey"
           :editing-key="editingKey"
           :expand-all="expandAllState"
+          :dragged-node="draggedNode"
+          :folder-parent-map="folderParentMap"
           @node-click="handleNodeClick"
           @node-context-menu="handleNodeContextMenu"
           @node-drag-start="handleDragStart"
           @node-drop="handleDrop"
           @node-rename="handleNodeRename"
         />
+      </div>
+
+      <!-- 하단 통계 -->
+      <div class="sidebar-stats">
+        <span class="stat-item" :title="`폴더 ${currentWorkspace?.folderCount || 0}/${currentWorkspace?.folderLimit || 20}`">
+          <Folder class="stat-icon" /> {{ currentWorkspace?.folderCount || 0 }}/{{ currentWorkspace?.folderLimit || 20 }}
+        </span>
+        <span class="stat-item" :title="`노트 ${currentWorkspace?.postCount || 0}/${currentWorkspace?.postLimit || 50}`">
+          <FileText class="stat-icon" /> {{ currentWorkspace?.postCount || 0 }}/{{ currentWorkspace?.postLimit || 50 }}
+        </span>
       </div>
 
       <!-- 하단 사용자 메뉴 -->
@@ -80,7 +92,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
-import { Search, X, FilePlus, FolderPlus, ChevronsUp, ChevronsDown, ArrowUpDown, FolderOpen, FilePen, FolderPlus as FolderPlusIcon, Pencil, Trash2, Check } from 'lucide-vue-next'
+import { Search, X, FilePlus, FolderPlus, ChevronsUp, ChevronsDown, ArrowUpDown, FolderOpen, FilePen, FolderPlus as FolderPlusIcon, Pencil, Trash2, Check, Folder, FileText } from 'lucide-vue-next'
 import TreeNode from './TreeNode.vue'
 import UserMenu from './UserMenu.vue'
 import SidebarSkeleton from '@/components/common/SidebarSkeleton.vue'
@@ -114,6 +126,26 @@ const searchInput = ref('')
 const searchQuery = ref('')
 
 const folderTree = computed(() => folderStore.folderTree)
+const currentWorkspace = computed(() => workspaceStore.currentWorkspace)
+
+// 폴더 ID -> parentId 맵 (트리 변경 시에만 재생성)
+const folderParentMap = computed(() => {
+  const map = new Map()
+
+  function buildMap(nodes) {
+    for (const node of nodes) {
+      if (node.type === 'folder') {
+        map.set(node.id, node.data?.parentId || null)
+      }
+      if (node.children?.length > 0) {
+        buildMap(node.children)
+      }
+    }
+  }
+  buildMap(folderTree.value)
+
+  return map
+})
 
 // 검색 필터링 (debounce된 searchQuery 사용)
 const filteredTree = computed(() => {
@@ -363,6 +395,22 @@ function toggleAllFolders() {
 
 const draggedNode = ref(null)
 
+// 하위 폴더인지 확인 (부모 체인 방식 - O(depth))
+function isDescendant(draggedFolderId, targetFolderId) {
+  let currentId = targetFolderId
+  const visited = new Set()
+
+  while (currentId) {
+    if (visited.has(currentId)) break
+    visited.add(currentId)
+
+    if (currentId === draggedFolderId) return true
+    currentId = folderParentMap.value.get(currentId)
+  }
+
+  return false
+}
+
 function handleDragStart({ node, event }) {
   draggedNode.value = node
   event.dataTransfer.effectAllowed = 'move'
@@ -386,8 +434,12 @@ function handleDrop({ targetNode }) {
     const targetFolderId = targetNode.id
     const currentParentId = draggedNode.value.data?.parentId
 
+    // 자기 자신으로 이동 불가
     if (folderId === targetFolderId) return
+    // 이미 같은 부모면 이동 불필요
     if (currentParentId === targetFolderId) return
+    // 하위 폴더로 이동 불가
+    if (isDescendant(folderId, targetFolderId)) return
 
     emit('moveFolder', folderId, targetFolderId)
   }
@@ -598,5 +650,29 @@ function handleRootDrop(event) {
 .create-btn:hover {
   background: var(--surface-hover);
   border-color: var(--primary-color);
+}
+
+/* 통계 */
+.sidebar-stats {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid var(--surface-border);
+  background: var(--surface-sidebar);
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--text-color-secondary);
+  cursor: default;
+}
+
+.stat-icon {
+  width: 14px;
+  height: 14px;
 }
 </style>

@@ -32,7 +32,7 @@
             </div>
             <div class="workspace-details">
               <span class="workspace-name">{{ workspace.name }}</span>
-              <span v-if="workspace.type === 'TEAM'" class="member-count">{{ workspace.memberCount }}명</span>
+              <span v-if="workspace.type === 'TEAM'" class="member-count">{{ workspace.memberCount }}/{{ workspace.memberLimit }}명</span>
             </div>
             <!-- 개인 워크스페이스는 설정 버튼 숨김 -->
             <button
@@ -51,7 +51,7 @@
           <div class="menu-item" :class="{ disabled: !workspaceStore.canCreateWorkspace }" @click="handleAddWorkspace">
             <Plus class="menu-icon" />
             <span>새 워크스페이스</span>
-            <span class="limit-badge">{{ workspaceStore.teamWorkspaceCount }}/3</span>
+            <span class="limit-badge">{{ workspaceStore.workspaceLimit.count }}/{{ workspaceStore.workspaceLimit.limit }}</span>
           </div>
         </div>
 

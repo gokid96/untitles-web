@@ -195,6 +195,10 @@ export const useFolderStore = defineStore('folder', () => {
       }
 
       updateFolderTree()
+
+      // 워크스페이스 폴더 count 업데이트
+      workspaceStore.updateFolderCount(1)
+
       return newFolder
     } catch (error) {
       console.error('Failed to create folder:', error)
@@ -249,6 +253,9 @@ export const useFolderStore = defineStore('folder', () => {
       }
 
       updateFolderTree()
+
+      // 워크스페이스 폴더 count 업데이트
+      workspaceStore.updateFolderCount(-1)
     } catch (error) {
       console.error('Failed to delete folder:', error)
       throw error

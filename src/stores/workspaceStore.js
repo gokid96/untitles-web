@@ -8,6 +8,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   const currentWorkspaceId = ref(null)
   const members = ref([])
   const isLoading = ref(false)
+  
+  // 워크스페이스 생성 제한 정보
+  const workspaceLimit = ref({ count: 0, limit: 3 })
 
   // 현재 워크스페이스
   const currentWorkspace = computed(() => {
@@ -29,14 +32,20 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   const isAdmin = computed(() => myRole.value === 'OWNER' || myRole.value === 'ADMIN')
   const canEdit = computed(() => myRole.value !== 'VIEWER')
 
-  // 워크스페이스 생성 가능 여부 (TEAM 타입 3개 제한)
-  const teamWorkspaceCount = computed(() => {
-    return workspaces.value.filter(w => w.type === 'TEAM').length
+  // 워크스페이스 생성 가능 여부 (백엔드에서 받은 제한 정보 사용)
+  const canCreateWorkspace = computed(() => {
+    return workspaceLimit.value.count < workspaceLimit.value.limit
   })
 
-  const canCreateWorkspace = computed(() => {
-    return teamWorkspaceCount.value < 3
-  })
+  // 워크스페이스 제한 정보 로드
+  async function loadWorkspaceLimit() {
+    try {
+      const response = await workspaceApi.getWorkspaceLimit()
+      workspaceLimit.value = response.data
+    } catch (error) {
+      console.error('Failed to load workspace limit:', error)
+    }
+  }
 
   // 워크스페이스 목록 로드
   async function loadWorkspaces() {
@@ -49,6 +58,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       if (!currentWorkspaceId.value && workspaces.value.length > 0) {
         currentWorkspaceId.value = workspaces.value[0].workspaceId
       }
+
+      // 워크스페이스 제한 정보도 함께 로드
+      await loadWorkspaceLimit()
 
       return workspaces.value
     } catch (error) {
@@ -64,6 +76,10 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     try {
       const response = await workspaceApi.createWorkspace(data)
       workspaces.value.push(response.data)
+      
+      // 제한 정보 갱신
+      await loadWorkspaceLimit()
+      
       return response.data
     } catch (error) {
       console.error('Failed to create workspace:', error)
@@ -103,6 +119,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       if (currentWorkspaceId.value === workspaceId) {
         currentWorkspaceId.value = workspaces.value[0]?.workspaceId || null
       }
+
+      // 제한 정보 갱신
+      await loadWorkspaceLimit()
     } catch (error) {
       console.error('Failed to delete workspace:', error)
       throw error
@@ -126,6 +145,10 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     try {
       const response = await workspaceApi.inviteMember(workspaceId, { email, role })
       members.value.push(response.data)
+      
+      // 워크스페이스 목록 갱신 (memberCount 업데이트)
+      await loadWorkspaces()
+      
       return response.data
     } catch (error) {
       console.error('Failed to invite member:', error)
@@ -153,6 +176,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     try {
       await workspaceApi.removeMember(workspaceId, memberId)
       members.value = members.value.filter(m => m.memberId !== memberId)
+      
+      // 워크스페이스 목록 갱신 (memberCount 업데이트)
+      await loadWorkspaces()
     } catch (error) {
       console.error('Failed to remove member:', error)
       throw error
@@ -182,6 +208,23 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     workspaces.value = []
     currentWorkspaceId.value = null
     members.value = []
+    workspaceLimit.value = { count: 0, limit: 3 }
+  }
+
+  // 폴더 count 로컬 업데이트
+  function updateFolderCount(delta) {
+    const workspace = workspaces.value.find(w => w.workspaceId === currentWorkspaceId.value)
+    if (workspace) {
+      workspace.folderCount = (workspace.folderCount || 0) + delta
+    }
+  }
+
+  // 게시글 count 로컬 업데이트
+  function updatePostCount(delta) {
+    const workspace = workspaces.value.find(w => w.workspaceId === currentWorkspaceId.value)
+    if (workspace) {
+      workspace.postCount = (workspace.postCount || 0) + delta
+    }
   }
 
   return {
@@ -190,6 +233,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     currentWorkspaceId,
     members,
     isLoading,
+    workspaceLimit,
     // computed
     currentWorkspace,
     myRole,
@@ -198,9 +242,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     isAdmin,
     canEdit,
     canCreateWorkspace,
-    teamWorkspaceCount,
     // 액션
     loadWorkspaces,
+    loadWorkspaceLimit,
     createWorkspace,
     selectWorkspace,
     updateWorkspace,
@@ -211,5 +255,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     removeMember,
     leaveWorkspace,
     clearWorkspaceData,
+    updateFolderCount,
+    updatePostCount,
   }
 })
