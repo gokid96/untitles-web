@@ -3,26 +3,35 @@
     <div class="viewer-header">
       <h1>{{ post?.title || '제목 없음' }}</h1>
       <div class="viewer-actions">
-        <Button label="수정" icon="pi pi-pencil" @click="handleEdit" severity="secondary" />
-        <Button label="삭제" icon="pi pi-trash" @click="handleDelete" severity="danger" />
+        <Button label="수정" @click="handleEdit" severity="secondary">
+          <template #icon>
+            <Pencil class="btn-icon" />
+          </template>
+        </Button>
+        <Button label="삭제" @click="handleDelete" severity="danger">
+          <template #icon>
+            <Trash2 class="btn-icon" />
+          </template>
+        </Button>
       </div>
     </div>
 
     <div class="post-meta">
       <div class="meta-item">
-        <i class="pi pi-calendar"></i>
+        <Calendar class="meta-icon" />
         <span>작성: {{ formatDate(post?.createdAt) }}</span>
       </div>
       <div class="meta-item">
-        <i class="pi pi-clock"></i>
+        <Clock class="meta-icon" />
         <span>수정: {{ formatDate(post?.updatedAt) }}</span>
       </div>
       <div v-if="post?.folderId" class="meta-item">
-        <i class="pi pi-folder"></i>
+        <Folder class="meta-icon" />
         <span>{{ getFolderName(post.folderId) }}</span>
       </div>
       <div class="meta-item">
-        <i :class="post?.isPublic ? 'pi pi-globe' : 'pi pi-lock'"></i>
+        <Globe v-if="post?.isPublic" class="meta-icon" />
+        <Lock v-else class="meta-icon" />
         <span>{{ post?.isPublic ? '공개' : '비공개' }}</span>
       </div>
     </div>
@@ -36,6 +45,7 @@
 </template>
 
 <script setup>
+import { Calendar, Clock, Folder, Globe, Lock, Pencil, Trash2 } from 'lucide-vue-next'
 import Button from 'primevue/button'
 import Divider from 'primevue/divider'
 import { useFolderStore } from '@/stores/folderStore'
@@ -95,6 +105,12 @@ function getFolderName(folderId) {
   gap: 0.5rem;
 }
 
+.btn-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 0.5rem;
+}
+
 .post-meta {
   display: flex;
   flex-wrap: wrap;
@@ -110,7 +126,9 @@ function getFolderName(folderId) {
   font-size: 0.9rem;
 }
 
-.meta-item i {
+.meta-icon {
+  width: 16px;
+  height: 16px;
   color: var(--primary-color);
 }
 

@@ -1,23 +1,14 @@
 <template>
   <div class="empty-content">
     <div class="empty-illustration">
-      <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="40" y="30" width="120" height="150" rx="8" stroke="currentColor" stroke-width="2" opacity="0.2"/>
-        <line x1="60" y1="60" x2="140" y2="60" stroke="currentColor" stroke-width="2" opacity="0.3"/>
-        <line x1="60" y1="80" x2="120" y2="80" stroke="currentColor" stroke-width="2" opacity="0.2"/>
-        <line x1="60" y1="100" x2="130" y2="100" stroke="currentColor" stroke-width="2" opacity="0.2"/>
-        <line x1="60" y1="120" x2="100" y2="120" stroke="currentColor" stroke-width="2" opacity="0.2"/>
-        <circle cx="150" cy="150" r="30" stroke="currentColor" stroke-width="2" opacity="0.3"/>
-        <line x1="140" y1="150" x2="160" y2="150" stroke="currentColor" stroke-width="2" opacity="0.4"/>
-        <line x1="150" y1="140" x2="150" y2="160" stroke="currentColor" stroke-width="2" opacity="0.4"/>
-      </svg>
+      <FileText class="illustration-icon" />
     </div>
-    
+
     <h2 class="empty-title">시작하기</h2>
     <p class="empty-description">새 노트를 작성하거나 사이드바에서 기존 노트를 선택하세요</p>
-    
+
     <button class="create-button" @click="handleCreatePost">
-      <i class="pi pi-plus"></i>
+      <Plus class="btn-icon" />
       <span>새 노트 작성</span>
     </button>
 
@@ -31,6 +22,8 @@
 </template>
 
 <script setup>
+import { FileText, Plus } from 'lucide-vue-next'
+
 const emit = defineEmits(['createPost'])
 
 function handleCreatePost() {
@@ -50,16 +43,21 @@ function handleCreatePost() {
 }
 
 .empty-illustration {
-  width: 160px;
-  height: 160px;
-  color: var(--text-color-secondary);
-  margin-bottom: 2rem;
-  opacity: 0.6;
+  width: 120px;
+  height: 120px;
+  margin-bottom: 0rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 24px;
 }
 
-.empty-illustration svg {
-  width: 100%;
-  height: 100%;
+.illustration-icon {
+  width: 56px;
+  height: 56px;
+  color: var(--text-color-secondary);
+  opacity: 0.5;
 }
 
 .empty-title {
@@ -101,8 +99,9 @@ function handleCreatePost() {
   transform: translateY(0);
 }
 
-.create-button i {
-  font-size: 0.875rem;
+.btn-icon {
+  width: 18px;
+  height: 18px;
 }
 
 .keyboard-hints {

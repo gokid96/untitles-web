@@ -2,7 +2,7 @@
   <div id="app" :class="{ 'dark-mode': isDarkMode }">
     <router-view />
     <Toast position="bottom-right" />
-    
+
     <!-- 글로벌 컴포넌트: 필요할 때만 렌더링 -->
     <SessionExpiredModal v-if="isSessionExpired" />
     <GlobalErrorToast v-if="globalError" />
@@ -16,10 +16,10 @@ import { useUiStore } from '@/stores/uiStore'
 import { useAppStore } from '@/stores/appStore'
 
 // 글로벌 모달 lazy loading
-const SessionExpiredModal = defineAsyncComponent(() => 
+const SessionExpiredModal = defineAsyncComponent(() =>
   import('@/components/common/SessionExpiredModal.vue')
 )
-const GlobalErrorToast = defineAsyncComponent(() => 
+const GlobalErrorToast = defineAsyncComponent(() =>
   import('@/components/common/GlobalErrorToast.vue')
 )
 
@@ -32,7 +32,7 @@ const globalError = computed(() => appStore.globalError)
 </script>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 
 /* Reset */
 *, *::before, *::after {
@@ -69,13 +69,13 @@ const globalError = computed(() => appStore.globalError)
   --accent-color-light: #a5b4fc;
 
   /* Surface - 라이트 모드 (부위별 톤 차이) */
-  --surface-ground: #f0f1f7;           /* 본문 배경 - 살짝 밝게 */
-  --surface-sidebar: #e8e9f2;          /* 사이드바 - 살짝 어둡게 */
-  --surface-card: #ffffff;             /* 카드/에디터 - 가장 밝게 */
-  --surface-border: #dcdee8;           /* 테두리 */
-  --surface-hover: #e8e9f2;            /* 호버 상태 */
-  --surface-overlay: #ffffff;          /* 오버레이/모달 */
-  --surface-section: #f0f1f7;          /* 섹션 구분 */
+  --surface-ground: #f0f1f7;
+  --surface-sidebar: #e8e9f2;
+  --surface-card: #ffffff;
+  --surface-border: #dcdee8;
+  --surface-hover: #e8e9f2;
+  --surface-overlay: #ffffff;
+  --surface-section: #f0f1f7;
 
   /* Text */
   --text-color: #1a1a2e;
@@ -109,13 +109,13 @@ const globalError = computed(() => appStore.globalError)
   --accent-color-light: #4f46e5;
 
   /* Surface - 다크 모드 (부위별 톤 차이) */
-  --surface-ground: #0c0c14;           /* 본문 배경 - 살짝 밝게 */
-  --surface-sidebar: #08080f;          /* 사이드바 - 살짝 어둡게 */
-  --surface-card: #12121f;             /* 카드/에디터 - 살짝 밝게 */
-  --surface-border: #1e1e32;           /* 테두리 */
-  --surface-hover: #1a1a2e;            /* 호버 상태 */
-  --surface-overlay: #151522;          /* 오버레이/모달 */
-  --surface-section: #0a0a12;          /* 섹션 구분 */
+  --surface-ground: #0c0c14;
+  --surface-sidebar: #08080f;
+  --surface-card: #12121f;
+  --surface-border: #1e1e32;
+  --surface-hover: #1a1a2e;
+  --surface-overlay: #151522;
+  --surface-section: #0a0a12;
 
   /* Text */
   --text-color: #e8eaf0;
@@ -131,12 +131,109 @@ const globalError = computed(() => appStore.globalError)
   --focus-ring-alpha: rgba(129, 140, 248, 0.2);
 }
 
-/* Base */
+/* ============================================
+   Typography System
+   ============================================ */
+
+/* 제목 스타일 */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  color: var(--text-color);
+}
+
+h1 { font-size: 2rem; font-weight: 700; }
+h2 { font-size: 1.5rem; font-weight: 600; }
+h3 { font-size: 1.25rem; font-weight: 600; }
+h4 { font-size: 1.125rem; font-weight: 500; }
+h5, h6 { font-size: 1rem; font-weight: 500; }
+
+/* 본문 스타일 */
+p, span, li {
+  font-weight: 400;
+  line-height: 1.65;
+  letter-spacing: -0.01em;
+}
+
+/* 작은 텍스트 */
+small, .text-sm {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  letter-spacing: 0;
+}
+
+/* 아주 작은 텍스트 */
+.text-xs {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+}
+
+/* 강조 텍스트 */
+strong, b, .font-semibold { font-weight: 600; }
+.font-medium { font-weight: 500; }
+
+/* 레이블/캡션 */
+label, .label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--text-color-secondary);
+}
+
+/* ============================================
+   Icon System
+   ============================================ */
+
+svg[class*="lucide"] {
+  stroke-width: 1.75;
+  flex-shrink: 0;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  border-radius: 8px;
+  color: var(--text-color-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.icon-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text-color);
+}
+
+.icon-btn:active {
+  transform: scale(0.95);
+}
+
+.icon-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.icon-text svg {
+  flex-shrink: 0;
+}
+
+/* ============================================
+   Base Styles
+   ============================================ */
+
 html, body {
   height: 100%;
-  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
+  letter-spacing: -0.01em;
 }
 
 body {
@@ -149,7 +246,7 @@ body {
   min-height: 100vh;
 }
 
-/* Scrollbar - 테마에 맞게 스타일링 */
+/* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -169,19 +266,13 @@ body {
   background: var(--text-color-secondary);
 }
 
-/* Selection - 액센트 컬러 사용 */
-::selection {
-  background: var(--accent-color);
-  color: #ffffff;
-}
-
 /* Focus */
 :focus-visible {
   outline: 2px solid var(--accent-color);
   outline-offset: 2px;
 }
 
-/* Links - 액센트 컬러 */
+/* Links */
 a {
   color: var(--accent-color);
   text-decoration: none;
@@ -199,10 +290,11 @@ a:hover {
 
 /* Buttons */
 .p-button {
-  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
   font-weight: 500;
   transition: all 0.2s ease;
   border-radius: 8px;
+  padding: 0.625rem 1.25rem;
 }
 
 .p-button.p-button-primary {
@@ -230,7 +322,7 @@ a:hover {
   box-shadow: 0 4px 16px rgba(129, 140, 248, 0.3);
 }
 
-/* Text Button (outlined/text style) */
+/* Text Button */
 .p-button.p-button-text {
   color: var(--text-color);
 }
@@ -242,12 +334,13 @@ a:hover {
 
 /* Input Fields */
 .p-inputtext {
-  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--surface-card);
   border: 1px solid var(--surface-border);
   border-radius: 8px;
   color: var(--text-color);
   transition: all 0.2s ease;
+  padding: 0.75rem 1rem;
 }
 
 .p-inputtext::placeholder {
@@ -277,29 +370,29 @@ a:hover {
 }
 
 .p-dialog .p-dialog-header {
-  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--surface-card);
   border-bottom: 1px solid var(--surface-border);
-  padding: 1.25rem 1.5rem;
+  padding: 1.5rem 1.75rem;
   color: var(--text-color);
 }
 
 .p-dialog .p-dialog-content {
-  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--surface-card);
-  padding: 1.5rem;
+  padding: 1.75rem;
   color: var(--text-color);
 }
 
 .p-dialog .p-dialog-footer {
   background: var(--surface-section);
   border-top: 1px solid var(--surface-border);
-  padding: 1rem 1.5rem;
+  padding: 1.25rem 1.75rem;
 }
 
 /* Menu */
 .p-menu {
-  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--surface-overlay);
   border: 1px solid var(--surface-border);
   border-radius: 12px;
@@ -326,7 +419,7 @@ a:hover {
 
 /* Context Menu */
 .p-contextmenu {
-  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--surface-overlay);
   border: 1px solid var(--surface-border);
   border-radius: 12px;
@@ -352,7 +445,7 @@ a:hover {
 
 /* Toast */
 .p-toast {
-  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
   opacity: 0.98;
 }
 
@@ -371,7 +464,7 @@ a:hover {
   color: var(--text-color);
 }
 
-/* Toast variants - 왼쪽 컬러바 제거 */
+/* Toast variants */
 .p-toast .p-toast-message.p-toast-message-success,
 .p-toast .p-toast-message.p-toast-message-error,
 .p-toast .p-toast-message.p-toast-message-warn,

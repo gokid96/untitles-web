@@ -69,7 +69,7 @@
 </template>
 
 <script setup>
-import { ref, computed, defineAsyncComponent, onMounted, onUnmounted } from 'vue'
+import { ref, computed, defineAsyncComponent, onMounted, onUnmounted, watch } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import FolderSidebar from '@/components/layout/FolderSidebar.vue'
 import EmptyContent from '@/components/editor/EmptyContent.vue'
@@ -77,6 +77,7 @@ import PostEditor from '@/components/editor/PostEditor.vue'
 import EditorSkeleton from '@/components/common/EditorSkeleton.vue'
 import { useFolderStore } from '@/stores/folderStore'
 import { usePostStore } from '@/stores/postStore'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useAuthenticatedAction, useSidebarResize } from '@/composables'
 import { getErrorMessage } from '@/utils/helpers'
 
@@ -91,6 +92,7 @@ const ConfirmDialog = defineAsyncComponent(() =>
 const toast = useToast()
 const folderStore = useFolderStore()
 const postStore = usePostStore()
+const workspaceStore = useWorkspaceStore()
 
 // 컴포저블 사용
 const { executeAuthenticated } = useAuthenticatedAction()
@@ -287,6 +289,18 @@ function handleGlobalKeydown(e) {
     handleCreatePost()
   }
 }
+
+// 워크스페이스 변경 감지 - 에디터 상태 초기화
+watch(
+  () => workspaceStore.currentWorkspaceId,
+  (newId, oldId) => {
+    if (newId !== oldId && oldId !== undefined) {
+      // 워크스페이스가 변경되면 에디터 상태 초기화
+      contentMode.value = 'empty'
+      postStore.clearCurrentPost()
+    }
+  }
+)
 
 onMounted(() => {
   document.addEventListener('keydown', handleGlobalKeydown)

@@ -14,8 +14,8 @@
           <img v-if="profileImageUrl" :src="profileImageUrl" alt="프로필" class="avatar-image" />
           <div v-else class="avatar-placeholder">{{ userInitial }}</div>
           <div class="avatar-overlay">
-            <i v-if="isUploading" class="pi pi-spin pi-spinner"></i>
-            <i v-else class="pi pi-camera"></i>
+            <Loader2 v-if="isUploading" class="overlay-icon spinning" />
+            <Camera v-else class="overlay-icon" />
           </div>
         </div>
         <input
@@ -94,6 +94,7 @@
 import { ref, reactive, computed, watch, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useToast } from 'primevue/usetoast'
+import { Camera, Loader2 } from 'lucide-vue-next'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
@@ -357,9 +358,19 @@ async function handleSave() {
   opacity: 1;
 }
 
-.avatar-overlay i {
+.overlay-icon {
+  width: 24px;
+  height: 24px;
   color: white;
-  font-size: 1.5rem;
+}
+
+.overlay-icon.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .avatar-hint {

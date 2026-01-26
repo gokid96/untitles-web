@@ -10,14 +10,23 @@
     </div>
 
     <template #footer>
-      <Button label="취소" icon="pi pi-times" @click="handleCancel" text :disabled="isSaving" />
-      <Button label="저장" icon="pi pi-check" @click="handleSave" :disabled="!folderName.trim() || isSaving" />
+      <Button label="취소" @click="handleCancel" text :disabled="isSaving">
+        <template #icon>
+          <X class="btn-icon" />
+        </template>
+      </Button>
+      <Button label="저장" @click="handleSave" :disabled="!folderName.trim() || isSaving">
+        <template #icon>
+          <Check class="btn-icon" />
+        </template>
+      </Button>
     </template>
   </Dialog>
 </template>
 
 <script setup>
 import { ref, watch, onUnmounted } from 'vue'
+import { X, Check } from 'lucide-vue-next'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
@@ -119,5 +128,11 @@ function handleCancel() {
 
 .field label {
   font-weight: 600;
+}
+
+.btn-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 0.5rem;
 }
 </style>

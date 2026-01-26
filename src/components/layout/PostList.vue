@@ -16,8 +16,8 @@
               <div class="post-card" @click="handlePostClick(post)" @contextmenu="handlePostContextMenu($event, post)">
                 <div class="post-card-header">
                   <h4>{{ post.title }}</h4>
-                  <i v-if="post.isPublic" class="pi pi-globe" v-tooltip.left="'공개'"></i>
-                  <i v-else class="pi pi-lock" v-tooltip.left="'비공개'"></i>
+                  <Globe v-if="post.isPublic" class="visibility-icon" v-tooltip.left="'공개'" />
+                  <Lock v-else class="visibility-icon" v-tooltip.left="'비공개'" />
                 </div>
                 <div class="post-card-content">
                   <p>{{ getPreviewText(post.content) }}</p>
@@ -41,6 +41,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { Globe, Lock, Eye, Pencil, Trash2, Plus } from 'lucide-vue-next'
 import DataView from 'primevue/dataview'
 import Paginator from 'primevue/paginator'
 import ContextMenu from 'primevue/contextmenu'
@@ -220,10 +221,12 @@ function getPreviewText(content) {
   white-space: nowrap;
 }
 
-.post-card-header i {
+.visibility-icon {
+  width: 16px;
+  height: 16px;
   margin-left: 0.5rem;
-  font-size: 1rem;
   color: var(--text-color-secondary);
+  flex-shrink: 0;
 }
 
 .post-card-content {

@@ -6,7 +6,7 @@
     <template v-else>
       <!-- 검색 (상단) -->
       <div class="search-box">
-        <i class="pi pi-search"></i>
+        <Search class="search-icon" />
        <input
           type="text"
           v-model="searchInput"
@@ -15,7 +15,7 @@
         />
 
         <button v-if="searchInput" class="clear-btn" @click="clearSearch">
-          <i class="pi pi-times"></i>
+          <X class="clear-icon" />
         </button>
       </div>
 
@@ -23,16 +23,17 @@
       <div class="sidebar-header">
         <div class="header-actions">
           <button class="action-btn" @click="handleCreatePost" title="새 노트">
-            <i class="pi pi-file-edit"></i>
+            <FilePlus class="action-icon" />
           </button>
           <button class="action-btn" @click="handleCreateRootFolder" title="새 폴더">
-            <i class="pi pi-folder-plus"></i>
+            <FolderPlus class="action-icon" />
           </button>
           <button class="action-btn" @click="toggleAllFolders" :title="allExpanded ? '모두 접기' : '모두 펼치기'">
-            <i :class="allExpanded ? 'pi pi-angle-double-up' : 'pi pi-angle-double-down'"></i>
+            <ChevronsUp v-if="allExpanded" class="action-icon" />
+            <ChevronsDown v-else class="action-icon" />
           </button>
           <button class="action-btn" @click="toggleSortMenu" title="정렬">
-            <i class="pi pi-sort-alt"></i>
+            <ArrowUpDown class="action-icon" />
           </button>
         </div>
         <Menu ref="sortMenu" :model="sortMenuItems" :popup="true" />
@@ -48,7 +49,7 @@
         :class="{ 'root-drag-over': isRootDragOver }"
       >
         <div v-if="filteredTree.length === 0" class="empty-state">
-          <i class="pi pi-folder-open"></i>
+          <FolderOpen class="empty-icon" />
           <p v-if="searchQuery">검색 결과가 없습니다</p>
           <p v-else>노트가 없습니다</p>
         </div>
@@ -79,6 +80,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { Search, X, FilePlus, FolderPlus, ChevronsUp, ChevronsDown, ArrowUpDown, FolderOpen, FilePen, FolderPlus as FolderPlusIcon, Pencil, Trash2, Check } from 'lucide-vue-next'
 import TreeNode from './TreeNode.vue'
 import UserMenu from './UserMenu.vue'
 import SidebarSkeleton from '@/components/common/SidebarSkeleton.vue'
@@ -465,9 +467,11 @@ function handleRootDrop(event) {
   box-shadow: 0 0 0 2px var(--focus-ring-alpha);
 }
 
-.search-box i {
+.search-icon {
+  width: 16px;
+  height: 16px;
   color: var(--text-color-secondary);
-  font-size: 0.875rem;
+  flex-shrink: 0;
 }
 
 .search-box input {
@@ -502,8 +506,9 @@ function handleRootDrop(event) {
   color: var(--text-color);
 }
 
-.clear-btn i {
-  font-size: 0.625rem;
+.clear-icon {
+  width: 12px;
+  height: 12px;
 }
 
 /* 액션 버튼 헤더 */
@@ -516,7 +521,6 @@ function handleRootDrop(event) {
 
 .header-actions {
   display: flex;
-
   gap: 0.25rem;
 }
 
@@ -539,8 +543,9 @@ function handleRootDrop(event) {
   color: var(--text-color);
 }
 
-.action-btn i {
-  font-size: 1rem;
+.action-icon {
+  width: 18px;
+  height: 18px;
 }
 
 /* 컨텐츠 */
@@ -567,8 +572,9 @@ function handleRootDrop(event) {
   text-align: center;
 }
 
-.empty-state i {
-  font-size: 2.5rem;
+.empty-icon {
+  width: 48px;
+  height: 48px;
   margin-bottom: 1rem;
   opacity: 0.5;
 }

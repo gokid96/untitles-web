@@ -4,7 +4,7 @@
       <!-- 로고 영역 -->
       <div class="logo-section">
         <router-link to="/" class="back-link">
-          <i class="pi pi-arrow-left"></i>
+          <ArrowLeft class="back-icon" />
         </router-link>
         <h1 class="logo-text">회원가입</h1>
         <p class="logo-tagline">Untitles와 함께 시작하세요</p>
@@ -61,7 +61,7 @@
         <!-- 인증 완료 -->
         <div class="form-group" v-if="emailVerified">
           <div class="verified-badge">
-            <i class="pi pi-check-circle"></i>
+            <CheckCircle class="verified-icon" />
             <span>이메일 인증 완료</span>
           </div>
         </div>
@@ -136,6 +136,7 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
+import { ArrowLeft, CheckCircle } from 'lucide-vue-next'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Button from 'primevue/button'
@@ -331,8 +332,14 @@ async function handleRegister() {
   left: 0;
   top: 0;
   color: rgba(255, 255, 255, 0.6);
-  font-size: 1.25rem;
   transition: color 0.2s;
+  display: flex;
+  align-items: center;
+}
+
+.back-icon {
+  width: 20px;
+  height: 20px;
 }
 
 .back-link:hover {
@@ -449,6 +456,11 @@ async function handleRegister() {
   color: #22c55e;
   font-size: 0.875rem;
   font-weight: 500;
+}
+
+.verified-icon {
+  width: 18px;
+  height: 18px;
 }
 
 .error-text {

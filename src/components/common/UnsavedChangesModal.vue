@@ -4,7 +4,7 @@
       <div v-if="visible" class="modal-overlay" @click.self="handleCancel">
         <div class="modal-container">
           <div class="modal-icon">
-            <i class="pi pi-exclamation-triangle"></i>
+            <AlertTriangle class="icon" />
           </div>
           <h3 class="modal-title">저장되지 않은 변경사항</h3>
           <p class="modal-message">
@@ -30,6 +30,7 @@
 
 <script setup>
 import { watch, onUnmounted } from 'vue'
+import { AlertTriangle } from 'lucide-vue-next'
 
 const props = defineProps({
   visible: {
@@ -115,8 +116,9 @@ onUnmounted(() => {
   background: rgba(245, 158, 11, 0.2);
 }
 
-.modal-icon i {
-  font-size: 1.5rem;
+.modal-icon .icon {
+  width: 24px;
+  height: 24px;
   color: #f59e0b;
 }
 

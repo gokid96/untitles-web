@@ -4,7 +4,7 @@
       <div v-if="visible" class="session-modal-overlay">
         <div class="session-modal">
           <div class="modal-icon">
-            <i class="pi pi-clock"></i>
+            <Clock class="icon" />
           </div>
           <h2 class="modal-title">세션이 만료되었습니다</h2>
           <p class="modal-message">
@@ -23,6 +23,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { Clock } from 'lucide-vue-next'
 import { useAppStore } from '@/stores/appStore'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -77,8 +78,9 @@ async function handleLogin() {
   justify-content: center;
 }
 
-.modal-icon i {
-  font-size: 2rem;
+.modal-icon .icon {
+  width: 32px;
+  height: 32px;
   color: var(--text-color-secondary);
 }
 

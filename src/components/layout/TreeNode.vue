@@ -19,13 +19,16 @@
     >
       <!-- 토글 아이콘 -->
       <span class="toggle-icon" @click.stop="toggleExpand" v-if="node.type === 'folder'">
-        <i :class="isExpanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"></i>
+        <ChevronDown v-if="isExpanded" class="toggle-chevron" />
+        <ChevronRight v-else class="toggle-chevron" />
       </span>
       <span class="toggle-icon" v-else></span>
 
       <!-- 아이콘 -->
       <span class="node-icon">
-        <i :class="node.type === 'folder' ? (isExpanded ? 'pi pi-folder-open' : 'pi pi-folder') : 'pi pi-file'"></i>
+        <FolderOpen v-if="node.type === 'folder' && isExpanded" class="folder-icon" />
+        <Folder v-else-if="node.type === 'folder'" class="folder-icon" />
+        <FileText v-else class="file-icon" />
       </span>
 
       <!-- 라벨 / 편집 -->
@@ -63,6 +66,7 @@
 
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue'
+import { ChevronDown, ChevronRight, Folder, FolderOpen, FileText } from 'lucide-vue-next'
 
 const props = defineProps({
   node: {
@@ -196,13 +200,14 @@ function handleDragEnd() {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 7px;
+  width: 14px;
   height: 18px;
   flex-shrink: 0;
 }
 
-.toggle-icon i {
-  font-size: 0.625rem;
+.toggle-chevron {
+  width: 12px;
+  height: 12px;
   color: var(--text-color-secondary);
   transition: transform 0.15s;
 }
@@ -216,13 +221,16 @@ function handleDragEnd() {
   flex-shrink: 0;
 }
 
-.node-icon i {
-  font-size: 0.875rem;
-  color: var(--text-color-secondary);
+.folder-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--primary-color);
 }
 
-.tree-node-item.folder .node-icon i {
-  color: var(--primary-color);
+.file-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--text-color-secondary);
 }
 
 .node-label {
@@ -258,7 +266,7 @@ function handleDragEnd() {
 .tree-node-children::before {
   content: '';
   position: absolute;
-  left: -0.625rem;
+  left: -0.350rem;
   top: 0;
   bottom: 0.5rem;
   width: 1px;

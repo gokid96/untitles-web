@@ -22,7 +22,7 @@
 
             <!-- 생성 제한 안내 -->
             <div v-if="!isEditMode && !workspaceStore.canCreateWorkspace" class="limit-notice">
-              <i class="pi pi-info-circle"></i>
+              <Info class="notice-icon" />
               <span>워크스페이스는 최대 3개까지 생성할 수 있습니다.</span>
             </div>
           </div>
@@ -31,7 +31,7 @@
           <div class="info-card" v-if="isEditMode">
             <div class="info-row">
               <div class="info-item">
-                <i class="pi pi-user info-icon"></i>
+                <User class="info-icon" />
                 <div class="info-content">
                   <span class="info-label">내 역할</span>
                   <span class="info-value" :class="'role-' + workspaceStore.myRole?.toLowerCase()">
@@ -40,14 +40,14 @@
                 </div>
               </div>
               <div class="info-item">
-                <i class="pi pi-users info-icon"></i>
+                <Users class="info-icon" />
                 <div class="info-content">
                   <span class="info-label">멤버</span>
                   <span class="info-value">{{ workspaceStore.currentWorkspace?.memberCount || 1 }}명</span>
                 </div>
               </div>
               <div class="info-item">
-                <i class="pi pi-calendar info-icon"></i>
+                <Calendar class="info-icon" />
                 <div class="info-content">
                   <span class="info-label">생성일</span>
                   <span class="info-value">{{ formatDate(workspaceStore.currentWorkspace?.createdAt) }}</span>
@@ -59,7 +59,7 @@
           <!-- 위험 구역 -->
           <div class="danger-section" v-if="isEditMode">
             <div class="danger-card" v-if="workspaceStore.isOwner">
-              <i class="pi pi-trash danger-icon"></i>
+              <Trash2 class="danger-icon" />
               <div class="danger-content">
                 <strong>워크스페이스 삭제</strong>
                 <p>모든 폴더와 노트가 영구적으로 삭제됩니다</p>
@@ -67,7 +67,7 @@
               <Button label="삭제" severity="danger" outlined size="small" @click="confirmDeleteWorkspace" />
             </div>
             <div class="danger-card warning" v-else>
-              <i class="pi pi-sign-out danger-icon"></i>
+              <LogOut class="danger-icon" />
               <div class="danger-content">
                 <strong>워크스페이스 나가기</strong>
                 <p>다시 참여하려면 초대가 필요합니다</p>
@@ -84,7 +84,7 @@
           <!-- 멤버 검색 -->
           <div class="search-section" v-if="!isEditMode || workspaceStore.isAdmin">
             <div class="search-wrapper">
-              <i class="pi pi-search search-icon"></i>
+              <Search class="search-icon" />
               <InputText v-model="searchEmail" placeholder="이메일 또는 닉네임으로 검색" class="search-input" @input="handleSearchInput"
                 @focus="showSearchResults = true" />
               <Dropdown v-model="inviteRole" :options="availableRoles" optionLabel="label" optionValue="value"
@@ -93,7 +93,7 @@
 
             <!-- 멤버 제한 안내 -->
             <div v-if="isEditMode && members.length >= 5" class="limit-notice">
-              <i class="pi pi-info-circle"></i>
+              <Info class="notice-icon" />
               <span>워크스페이스 멤버는 최대 5명까지 초대할 수 있습니다.</span>
             </div>
 
@@ -123,7 +123,7 @@
             </div>
 
             <div v-if="memberList.length === 0" class="empty-state">
-              <i class="pi pi-users empty-icon"></i>
+              <Users class="empty-icon" />
               <p>{{ isEditMode ? '멤버가 없습니다' : '초대할 멤버를 검색해서 추가하세요' }}</p>
             </div>
 
@@ -143,8 +143,12 @@
                   <span v-else class="role-tag" :class="'role-' + member.role?.toLowerCase()">
                     {{ getRoleLabel(member.role) }}
                   </span>
-                  <Button v-if="canRemoveMember(member)" icon="pi pi-times" severity="secondary" text rounded size="small"
-                    class="remove-btn" @click="handleRemoveMember(member)" />
+                  <Button v-if="canRemoveMember(member)" severity="secondary" text rounded size="small"
+                    class="remove-btn" @click="handleRemoveMember(member)">
+                    <template #icon>
+                      <X class="remove-icon" />
+                    </template>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -159,7 +163,7 @@
     :showHeader="false" class="delete-modal" :pt="{ root: { class: 'delete-dialog-root' } }">
     <div class="delete-content">
       <div class="delete-icon-wrapper">
-        <i class="pi pi-trash"></i>
+        <Trash2 class="delete-icon" />
       </div>
       <h3 class="delete-title">워크스페이스 삭제</h3>
       <p class="delete-message">
@@ -182,6 +186,7 @@
 <script setup>
 import { ref, computed, watch, onUnmounted } from 'vue'
 import { useToast } from 'primevue/usetoast'
+import { User, Users, Calendar, Trash2, LogOut, Search, Info, X } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/authStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { userApi } from '@/api/userApi'
@@ -664,8 +669,10 @@ async function confirmLeaveWorkspace() {
   color: #f59e0b;
 }
 
-.limit-notice i {
-  font-size: 1rem;
+.notice-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
 /* 정보 카드 */
@@ -687,7 +694,8 @@ async function confirmLeaveWorkspace() {
 }
 
 .info-icon {
-  font-size: 1.1rem;
+  width: 18px;
+  height: 18px;
   color: var(--text-color-secondary);
 }
 
@@ -738,7 +746,8 @@ async function confirmLeaveWorkspace() {
 }
 
 .danger-icon {
-  font-size: 1.25rem;
+  width: 20px;
+  height: 20px;
   color: var(--text-color-secondary);
 }
 
@@ -785,7 +794,9 @@ async function confirmLeaveWorkspace() {
 }
 
 .search-icon {
-  padding-left: 0.5rem;
+  width: 18px;
+  height: 18px;
+  margin-left: 0.5rem;
   color: var(--text-color-secondary);
 }
 
@@ -939,7 +950,8 @@ async function confirmLeaveWorkspace() {
 }
 
 .empty-icon {
-  font-size: 2rem;
+  width: 40px;
+  height: 40px;
   margin-bottom: 0.75rem;
   color: var(--text-color-secondary);
   opacity: 0.5;
@@ -1017,6 +1029,11 @@ async function confirmLeaveWorkspace() {
   opacity: 1;
 }
 
+.remove-icon {
+  width: 14px;
+  height: 14px;
+}
+
 /* 삭제 모달 */
 :deep(.delete-modal .p-dialog-content) {
   padding: 0;
@@ -1039,8 +1056,9 @@ async function confirmLeaveWorkspace() {
   justify-content: center;
 }
 
-.delete-icon-wrapper i {
-  font-size: 1.5rem;
+.delete-icon {
+  width: 24px;
+  height: 24px;
   color: #ef4444;
 }
 

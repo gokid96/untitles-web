@@ -10,7 +10,7 @@
         <span class="user-nickname">{{ currentUser?.nickname }}</span>
         <span class="workspace-name">{{ currentWorkspaceName }}</span>
       </div>
-      <i class="pi pi-chevron-up expand-icon" :class="{ rotated: isMenuOpen }"></i>
+      <ChevronUp class="expand-icon" :class="{ rotated: isMenuOpen }" />
     </div>
 
     <!-- 팝업 메뉴 -->
@@ -27,7 +27,8 @@
             @click="handleSelectWorkspace(workspace.workspaceId)"
           >
             <div class="workspace-icon" :class="{ team: workspace.type === 'TEAM' }">
-              <i :class="workspace.type === 'TEAM' ? 'pi pi-users' : 'pi pi-user'"></i>
+              <Users v-if="workspace.type === 'TEAM'" class="ws-icon" />
+              <User v-else class="ws-icon" />
             </div>
             <div class="workspace-details">
               <span class="workspace-name">{{ workspace.name }}</span>
@@ -39,7 +40,7 @@
               class="settings-btn"
               @click.stop="handleManageWorkspace(workspace)"
             >
-              <i class="pi pi-cog"></i>
+              <Settings class="settings-icon" />
             </button>
           </div>
         </div>
@@ -48,7 +49,7 @@
 
         <div class="menu-section">
           <div class="menu-item" :class="{ disabled: !workspaceStore.canCreateWorkspace }" @click="handleAddWorkspace">
-            <i class="pi pi-plus"></i>
+            <Plus class="menu-icon" />
             <span>새 워크스페이스</span>
             <span class="limit-badge">{{ workspaceStore.teamWorkspaceCount }}/3</span>
           </div>
@@ -58,11 +59,12 @@
 
         <div class="menu-section">
           <div class="menu-item" @click="handleOpenProfile">
-            <i class="pi pi-user"></i>
+            <User class="menu-icon" />
             <span>내 정보</span>
           </div>
           <div class="menu-item" @click="toggleTheme">
-            <i :class="uiStore.isDarkMode ? 'pi pi-sun' : 'pi pi-moon'"></i>
+            <Sun v-if="uiStore.isDarkMode" class="menu-icon" />
+            <Moon v-else class="menu-icon" />
             <span>{{ uiStore.isDarkMode ? '라이트 모드' : '다크 모드' }}</span>
           </div>
         </div>
@@ -71,7 +73,7 @@
 
         <div class="menu-section">
           <div class="menu-item danger" @click="handleLogout">
-            <i class="pi pi-sign-out"></i>
+            <LogOut class="menu-icon" />
             <span>로그아웃</span>
           </div>
         </div>
@@ -95,6 +97,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
+import { ChevronUp, Users, User, Settings, Plus, Sun, Moon, LogOut } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/authStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
@@ -231,13 +234,16 @@ onUnmounted(() => {
 .user-menu-container {
   position: relative;
   border-top: 1px solid var(--surface-border);
+  height: 49px;
+  flex-shrink: 0;
 }
 
 .user-button {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.47rem 1rem;
+  padding: 0 1rem;
+  height: 100%;
   cursor: pointer;
   transition: background-color 0.15s;
 }
@@ -296,8 +302,9 @@ onUnmounted(() => {
 }
 
 .expand-icon {
+  width: 14px;
+  height: 14px;
   color: var(--text-color-secondary);
-  font-size: 0.75rem;
   transition: transform 0.2s;
 }
 
@@ -369,18 +376,17 @@ onUnmounted(() => {
   background: transparent;
 }
 
-.menu-item i {
-  font-size: 1rem;
+.menu-icon {
+  width: 18px;
+  height: 18px;
   color: var(--text-color-secondary);
-  width: 1.25rem;
-  text-align: center;
 }
 
 .menu-item.danger {
   color: var(--red-500);
 }
 
-.menu-item.danger i {
+.menu-item.danger .menu-icon {
   color: var(--red-500);
 }
 
@@ -427,12 +433,13 @@ onUnmounted(() => {
   color: var(--primary-color-text);
 }
 
-.workspace-icon i {
-  font-size: 0.75rem;
+.ws-icon {
+  width: 14px;
+  height: 14px;
   color: var(--text-color-secondary);
 }
 
-.workspace-icon.team i {
+.workspace-icon.team .ws-icon {
   color: inherit;
 }
 
@@ -469,6 +476,11 @@ onUnmounted(() => {
 .settings-btn:hover {
   background: var(--surface-border);
   color: var(--text-color);
+}
+
+.settings-icon {
+  width: 14px;
+  height: 14px;
 }
 
 /* 트랜지션 */

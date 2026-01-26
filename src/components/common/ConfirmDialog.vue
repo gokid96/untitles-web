@@ -4,7 +4,7 @@
       <div v-if="visible" class="modal-overlay" @click.self="handleCancel">
         <div class="modal-container" ref="modalRef">
           <div class="modal-icon">
-            <i class="pi pi-trash"></i>
+            <Trash2 class="icon" />
           </div>
           <h3 class="modal-title">{{ header || '삭제 확인' }}</h3>
           <p class="modal-message">{{ message }}</p>
@@ -24,6 +24,7 @@
 
 <script setup>
 import { ref, watch, onUnmounted, nextTick } from 'vue'
+import { Trash2 } from 'lucide-vue-next'
 
 const props = defineProps({
   visible: {
@@ -123,8 +124,9 @@ onUnmounted(() => {
   background: rgba(239, 68, 68, 0.2);
 }
 
-.modal-icon i {
-  font-size: 1.5rem;
+.modal-icon .icon {
+  width: 24px;
+  height: 24px;
   color: #ef4444;
 }
 

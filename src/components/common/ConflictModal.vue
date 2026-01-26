@@ -13,7 +13,7 @@
   >
     <div class="conflict-modal">
       <div class="conflict-icon">
-        <i class="pi pi-exclamation-triangle"></i>
+        <AlertTriangle class="icon" />
       </div>
 
       <!-- <h3>수정 충돌</h3> -->
@@ -33,6 +33,7 @@
 
 <script setup>
 import Dialog from 'primevue/dialog'
+import { AlertTriangle } from 'lucide-vue-next'
 
 defineProps({
   visible: {
@@ -64,8 +65,9 @@ function handleLoadLatest() {
   margin-bottom: 1rem;
 }
 
-.conflict-icon i {
-  font-size: 2rem;
+.conflict-icon .icon {
+  width: 40px;
+  height: 40px;
   color: #f59e0b;
 }
 

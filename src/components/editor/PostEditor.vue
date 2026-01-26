@@ -4,13 +4,15 @@
     <div class="editor-topbar">
       <div class="topbar-left">
         <span class="breadcrumb" v-if="folderName">
-          <i class="pi pi-folder"></i>
+          <Folder class="breadcrumb-icon" />
           <span>{{ folderName }}</span>
         </span>
       </div>
       <div class="topbar-right">
         <div class="save-indicator" :class="{ saving: isSaving, unsaved: hasUnsavedChanges && !isSaving }">
-          <i :class="saveIndicatorIcon"></i>
+          <Loader2 v-if="isSaving" class="indicator-icon spinning" />
+          <Circle v-else-if="hasUnsavedChanges" class="indicator-icon unsaved-dot" />
+          <Check v-else class="indicator-icon" />
           <span>{{ saveIndicatorText }}</span>
         </div>
       </div>
@@ -39,9 +41,9 @@
         <button @click="editor.chain().focus().toggleStrike().run()" :class="{ active: editor.isActive('strike') }"
           title="취소선"><s>S</s></button>
         <button @click="editor.chain().focus().toggleHighlight().run()" :class="{ active: editor.isActive('highlight') }"
-          title="형광펜"><i class="pi pi-sun"></i></button>
+          title="형광펜"><Highlighter class="toolbar-icon" /></button>
         <button @click="openLinkPopover" :class="{ active: editor.isActive('link') }"
-          title="링크"><i class="pi pi-link"></i></button>
+          title="링크"><Link2 class="toolbar-icon" /></button>
       </div>
       <div class="toolbar-divider"></div>
       <div class="toolbar-group">
@@ -55,31 +57,31 @@
       <div class="toolbar-divider"></div>
       <div class="toolbar-group">
         <button @click="editor.chain().focus().setTextAlign('left').run()"
-          :class="{ active: editor.isActive({ textAlign: 'left' }) }" title="왼쪽 정렬"><i class="pi pi-align-left"></i></button>
+          :class="{ active: editor.isActive({ textAlign: 'left' }) }" title="왼쪽 정렬"><AlignLeft class="toolbar-icon" /></button>
         <button @click="editor.chain().focus().setTextAlign('center').run()"
-          :class="{ active: editor.isActive({ textAlign: 'center' }) }" title="가운데 정렬"><i class="pi pi-align-center"></i></button>
+          :class="{ active: editor.isActive({ textAlign: 'center' }) }" title="가운데 정렬"><AlignCenter class="toolbar-icon" /></button>
         <button @click="editor.chain().focus().setTextAlign('right').run()"
-          :class="{ active: editor.isActive({ textAlign: 'right' }) }" title="오른쪽 정렬"><i class="pi pi-align-right"></i></button>
+          :class="{ active: editor.isActive({ textAlign: 'right' }) }" title="오른쪽 정렬"><AlignRight class="toolbar-icon" /></button>
       </div>
       <div class="toolbar-divider"></div>
       <div class="toolbar-group">
         <button @click="editor.chain().focus().toggleBulletList().run()"
-          :class="{ active: editor.isActive('bulletList') }" title="불릿 리스트"><i class="pi pi-list"></i></button>
+          :class="{ active: editor.isActive('bulletList') }" title="불릿 리스트"><List class="toolbar-icon" /></button>
         <button @click="editor.chain().focus().toggleOrderedList().run()"
-          :class="{ active: editor.isActive('orderedList') }" title="번호 리스트"><i class="pi pi-sort-numeric-up"></i></button>
+          :class="{ active: editor.isActive('orderedList') }" title="번호 리스트"><ListOrdered class="toolbar-icon" /></button>
         <button @click="editor.chain().focus().toggleTaskList().run()"
-          :class="{ active: editor.isActive('taskList') }" title="체크리스트"><i class="pi pi-check-square"></i></button>
+          :class="{ active: editor.isActive('taskList') }" title="체크리스트"><ListTodo class="toolbar-icon" /></button>
         <button @click="editor.chain().focus().toggleBlockquote().run()"
-          :class="{ active: editor.isActive('blockquote') }" title="인용"><i class="pi pi-comment"></i></button>
+          :class="{ active: editor.isActive('blockquote') }" title="인용"><Quote class="toolbar-icon" /></button>
       </div>
       <div class="toolbar-divider"></div>
       <div class="toolbar-group">
         <button @click="editor.chain().focus().toggleCodeBlock().run()"
-          :class="{ active: editor.isActive('codeBlock') }" title="코드 블록"><i class="pi pi-code"></i></button>
-        <button @click="editor.chain().focus().setHorizontalRule().run()" title="구분선"><i class="pi pi-minus"></i></button>
-        <button @click="insertTable" title="테이블 삽입"><i class="pi pi-table"></i></button>
-        <button @click="triggerImageUpload" title="이미지 삽입"><i class="pi pi-image"></i></button>
-        <button @click="exportMarkdown" title="마크다운 내보내기"><i class="pi pi-download"></i></button>
+          :class="{ active: editor.isActive('codeBlock') }" title="코드 블록"><Code class="toolbar-icon" /></button>
+        <button @click="editor.chain().focus().setHorizontalRule().run()" title="구분선"><Minus class="toolbar-icon" /></button>
+        <button @click="insertTable" title="테이블 삽입"><Table class="toolbar-icon" /></button>
+        <button @click="triggerImageUpload" title="이미지 삽입"><ImageIcon class="toolbar-icon" /></button>
+        <button @click="exportMarkdown" title="마크다운 내보내기"><Download class="toolbar-icon" /></button>
         <input
           ref="imageInput"
           type="file"
@@ -128,13 +130,18 @@ import Link from '@tiptap/extension-link'
 import Highlight from '@tiptap/extension-highlight'
 import TextAlign from '@tiptap/extension-text-align'
 import Underline from '@tiptap/extension-underline'
-import { Table } from '@tiptap/extension-table'
+import { Table as TiptapTable } from '@tiptap/extension-table'
 import { TableRow } from '@tiptap/extension-table-row'
 import { TableCell } from '@tiptap/extension-table-cell'
 import { TableHeader } from '@tiptap/extension-table-header'
 import Image from '@tiptap/extension-image'
 import { common, createLowlight } from 'lowlight'
 import TurndownService from 'turndown'
+import { 
+  Folder, Loader2, Circle, Check, Highlighter, Link2, 
+  AlignLeft, AlignCenter, AlignRight, List, ListOrdered, 
+  ListTodo, Quote, Code, Minus, Table, Image as ImageIcon, Download 
+} from 'lucide-vue-next'
 import { debounce } from '@/utils/helpers'
 import { useFolderStore } from '@/stores/folderStore'
 import { usePostStore } from '@/stores/postStore'
@@ -185,12 +192,6 @@ const hasUnsavedChanges = computed(() => {
 })
 
 // 저장 상태 표시
-const saveIndicatorIcon = computed(() => {
-  if (isSaving.value) return 'pi pi-spin pi-spinner'
-  if (hasUnsavedChanges.value) return 'pi pi-circle-fill'
-  return 'pi pi-check'
-})
-
 const saveIndicatorText = computed(() => {
   if (isSaving.value) return '저장 중'
   if (hasUnsavedChanges.value) return '저장되지 않음'
@@ -236,7 +237,7 @@ const editor = useEditor({
     Highlight,
     TextAlign.configure({ types: ['heading', 'paragraph'] }),
     Underline,
-    Table.configure({ resizable: true }),
+    TiptapTable.configure({ resizable: true }),
     TableRow,
     TableCell,
     TableHeader,
@@ -648,8 +649,9 @@ onBeforeUnmount(() => {
   color: var(--text-color-secondary);
 }
 
-.breadcrumb i {
-  font-size: 0.75rem;
+.breadcrumb-icon {
+  width: 14px;
+  height: 14px;
 }
 
 .save-indicator {
@@ -669,8 +671,24 @@ onBeforeUnmount(() => {
   color: #f59e0b;
 }
 
-.save-indicator.unsaved i {
-  font-size: 0.5rem;
+.indicator-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.indicator-icon.spinning {
+  animation: spin 1s linear infinite;
+}
+
+.indicator-icon.unsaved-dot {
+  width: 8px;
+  height: 8px;
+  fill: currentColor;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .editor-body {
@@ -843,7 +861,9 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  padding: 0.625rem 1.5rem;
+  padding: 0 1.5rem;
+  height: 49px;
+  flex-shrink: 0;
   border-top: 1px solid var(--surface-border);
   background: var(--surface-ground);
 }
@@ -879,8 +899,9 @@ onBeforeUnmount(() => {
   color: var(--primary-color-text);
 }
 
-.toolbar-group button i {
-  font-size: 0.9375rem;
+.toolbar-icon {
+  width: 16px;
+  height: 16px;
 }
 
 .toolbar-divider {
