@@ -96,7 +96,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import InputText from 'primevue/inputtext'
@@ -122,6 +122,23 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8070
 
 // OAuth URL은 /api/v1 없이 직접 호출
 const OAUTH_BASE_URL = API_BASE_URL.replace('/api/v1', '')
+
+// OAuth 실패 시 에러 메시지 표시
+onMounted(() => {
+  const errorParam = route.query.error
+  if (errorParam) {
+    const decodedError = decodeURIComponent(errorParam)
+    toast.add({
+      severity: 'error',
+      summary: '로그인 실패',
+      detail: decodedError,
+      life: 5000,
+    })
+
+    // URL에서 에러 파라미터 제거
+    router.replace({ path: '/login', query: {} })
+  }
+})
 
 function socialLogin(provider) {
   window.location.href = `${OAUTH_BASE_URL}/oauth2/authorization/${provider}`

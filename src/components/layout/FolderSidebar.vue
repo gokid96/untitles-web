@@ -92,7 +92,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
-import { Search, X, FilePlus, FolderPlus, ChevronsUp, ChevronsDown, ArrowUpDown, FolderOpen, FilePen, FolderPlus as FolderPlusIcon, Pencil, Trash2, Check, Folder, FileText } from 'lucide-vue-next'
+import { Search, X, FilePlus, FolderPlus, ChevronsUp, ChevronsDown, ArrowUpDown, FolderOpen,  FolderPlus as Folder, FileText } from 'lucide-vue-next'
 import TreeNode from './TreeNode.vue'
 import UserMenu from './UserMenu.vue'
 import SidebarSkeleton from '@/components/common/SidebarSkeleton.vue'
