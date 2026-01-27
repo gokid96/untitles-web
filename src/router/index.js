@@ -49,8 +49,8 @@ let isInitialized = false
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
 
-  // 첫 로드 시 세션 확인 (한 번만)
-  if (!isInitialized) {
+  // 인증이 필요한 페이지일 때만 세션 확인 (한 번만)
+  if (to.meta.requiresAuth && !isInitialized) {
     isInitialized = true
     await authStore.loadUserFromStorage()
   }
