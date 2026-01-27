@@ -22,6 +22,7 @@ export const useAuthStore = defineStore('auth', () => {
         currentUser.value = {
           userId: response.data.userId,
           id: response.data.userId,
+          email: response.data.email,
           loginId: response.data.loginId,
           nickname: response.data.nickname,
           profileImage: response.data.profileImage,
@@ -82,6 +83,7 @@ export const useAuthStore = defineStore('auth', () => {
       currentUser.value = {
         userId: userData.userId,
         id: userData.userId,
+        email: userData.email,
         loginId: userData.loginId,
         nickname: userData.nickname,
         profileImage: userData.profileImage,
@@ -107,6 +109,7 @@ export const useAuthStore = defineStore('auth', () => {
       currentUser.value = {
         userId: data.userId,
         id: data.userId,
+        email: data.email,
         loginId: data.loginId,
         nickname: data.nickname,
         profileImage: data.profileImage,
@@ -144,6 +147,7 @@ export const useAuthStore = defineStore('auth', () => {
         ...currentUser.value,
         userId: userData.userId,
         id: userData.userId,
+        email: userData.email,
         loginId: userData.loginId,
         nickname: userData.nickname,
         profileImage: userData.profileImage,

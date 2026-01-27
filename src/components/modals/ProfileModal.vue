@@ -28,6 +28,18 @@
         <span class="avatar-hint">클릭하여 이미지 변경</span>
       </div>
 
+      <!-- 이메일 (읽기 전용) -->
+      <div class="field">
+        <label for="email">이메일</label>
+        <InputText
+          id="email"
+          :value="currentUser?.email || ''"
+          placeholder="이메일"
+          class="w-full"
+          disabled
+        />
+      </div>
+
       <!-- 닉네임 -->
       <div class="field">
         <label for="nickname">닉네임</label>
@@ -156,7 +168,7 @@ onUnmounted(() => {
 
 function handleKeydown(e) {
   if (!props.visible) return
-  
+
   if (e.key === 'Escape') {
     handleCancel()
   } else if (e.key === 'Enter' && !e.shiftKey) {
@@ -400,6 +412,11 @@ async function handleSave() {
 
 :deep(.p-inputtext) {
   height: 2.75rem;
+}
+
+:deep(.p-inputtext:disabled) {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .hint {
