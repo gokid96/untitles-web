@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="google-site-verification" content="TcYJsG3mYQfN5OpX04gg5wpKrdzvpC_TpcxK6wYeZ78" />
-    
+
     <!-- Favicon -->
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
@@ -21,19 +21,37 @@
     <meta name="msapplication-TileColor" content="#171717" />
 
     <!-- SEO -->
-    <meta name="description" content="Untitles" />
+    <meta
+      name="description"
+      content="미니멀한 노트 앱 Untitles. 계층형 폴더, 마크다운 에디터, 다크 모드, 팀 워크스페이스를 지원하는 깔끔한 노트 서비스입니다."
+    />
+    <meta
+      name="keywords"
+      content="노트 앱, 노트 서비스, 메모 앱, 마크다운 노트, 미니멀 노트, Untitles"
+    />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://www.untitles.net" />
 
-    <title>Untitles</title>
+    <!-- Open Graph -->
+    <meta property="og:title" content="Untitles - 생각을 정리하는 가장 단순한 노트 앱" />
+    <meta
+      property="og:description"
+      content="미니멀한 노트 앱 Untitles. 계층형 폴더, 마크다운 에디터, 팀 워크스페이스를 지원합니다."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://www.untitles.net" />
+
+    <title>Untitles - 생각을 정리하는 가장 단순한 노트 앱</title>
 
     <!-- 다크모드 깜빡임 방지: Vue 마운트 전에 먼저 적용 -->
     <script>
-      (function() {
-        const darkMode = localStorage.getItem('darkMode');
+      ;(function () {
+        const darkMode = localStorage.getItem('darkMode')
         // 기본값 true (darkMode가 'false'가 아니면 다크모드)
         if (darkMode !== 'false') {
-          document.documentElement.classList.add('dark-mode');
+          document.documentElement.classList.add('dark-mode')
         }
-      })();
+      })()
     </script>
 
     <!-- 초기 로딩 시 배경색 깜빡임 방지 -->
