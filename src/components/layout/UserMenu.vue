@@ -58,6 +58,10 @@
         <div class="menu-divider"></div>
 
         <div class="menu-section">
+          <div class="menu-item" @click="handleOpenPublish">
+            <Globe class="menu-icon" />
+            <span>공개 설정</span>
+          </div>
           <div class="menu-item" @click="handleOpenProfile">
             <User class="menu-icon" />
             <span>내 정보</span>
@@ -82,6 +86,7 @@
 
     <!-- 모달 -->
     <ProfileModal v-model:visible="isProfileModalOpen" />
+    <PublishModal v-model:visible="isPublishModalOpen" />
     <WorkspaceModal
       v-model:visible="isWorkspaceModalOpen"
       :mode="workspaceModalMode"
@@ -97,7 +102,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
-import { ChevronUp, Users, User, Settings, Plus, Sun, Moon, LogOut } from 'lucide-vue-next'
+import { ChevronUp, Users, User, Settings, Plus, Sun, Moon, LogOut, Globe } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/authStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
@@ -105,6 +110,7 @@ import { useFolderStore } from '@/stores/folderStore'
 import { usePostStore } from '@/stores/postStore'
 import ProfileModal from '@/components/modals/ProfileModal.vue'
 import WorkspaceModal from '@/components/modals/WorkspaceModal.vue'
+import PublishModal from '@/components/modals/PublishModal.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -120,6 +126,7 @@ const isMenuOpen = ref(false)
 const isProfileModalOpen = ref(false)
 const isWorkspaceModalOpen = ref(false)
 const workspaceModalMode = ref('create')
+const isPublishModalOpen = ref(false)
 const menuRef = ref(null)
 
 const userInitial = computed(() => {
@@ -140,6 +147,11 @@ function toggleMenu() {
 
 function closeMenu() {
   isMenuOpen.value = false
+}
+
+function handleOpenPublish() {
+  isPublishModalOpen.value = true
+  closeMenu()
 }
 
 function handleOpenProfile() {

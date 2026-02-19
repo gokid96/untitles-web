@@ -39,6 +39,21 @@ const router = createRouter({
       path: '/main',
       redirect: '/app',
     },
+    // 공개 페이지 (비로그인 접근 가능)
+    {
+      path: '/public/:slug',
+      name: 'public-workspace',
+      component: () => import('@/views/PublicWorkspaceView.vue'),
+      meta: { requiresAuth: false },
+      children: [
+        {
+          path: 'posts/:postId',
+          name: 'public-post',
+          component: () => import('@/views/PublicPostView.vue'),
+          meta: { requiresAuth: false },
+        },
+      ],
+    },
   ],
 })
 
