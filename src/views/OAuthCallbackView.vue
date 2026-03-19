@@ -21,19 +21,30 @@ const toast = useToast()
 const statusMessage = ref('로그인 처리 중...')
 
 onMounted(async () => {
-  // URL에서 에러 파라미터 확인 (OAuth 실패 시 백엔드에서 전달)
   const errorParam = route.query.error
 
   if (errorParam) {
-    const decodedError = decodeURIComponent(errorParam)
-
     toast.add({
       severity: 'error',
       summary: '로그인 실패',
-      detail: decodedError,
+      detail: decodeURIComponent(errorParam),
       life: 5000,
     })
+    router.replace('/login')
+    return
+  }
 
+  // URL에서 JWT 토큰 추출 (?accessToken=xxx&refreshToken=xxx)
+  const accessToken = route.query.accessToken
+  const refreshToken = route.query.refreshToken
+
+  if (!accessToken || !refreshToken) {
+    toast.add({
+      severity: 'error',
+      summary: '로그인 실패',
+      detail: '토큰을 받지 못했습니다. 다시 로그인해주세요.',
+      life: 5000,
+    })
     router.replace('/login')
     return
   }
@@ -41,12 +52,15 @@ onMounted(async () => {
   try {
     statusMessage.value = '사용자 정보 확인 중...'
 
-    // OAuth 로그인 후 세션이 이미 생성되어 있으므로
-    // 서버에서 현재 사용자 정보를 가져옴
-    const isAuthenticated = await authStore.checkAuthStatus()
+    // 토큰 저장
+    localStorage.setItem('accessToken', accessToken)
+    localStorage.setItem('refreshToken', refreshToken)
 
-    if (!isAuthenticated) {
-      throw new Error('세션 생성에 실패했습니다. 다시 로그인해주세요.')
+    // 사용자 정보 로드
+    const success = await authStore.loadUserFromStorage()
+
+    if (!success) {
+      throw new Error('사용자 정보를 가져오지 못했습니다.')
     }
 
     toast.add({
@@ -60,18 +74,13 @@ onMounted(async () => {
   } catch (error) {
     console.error('OAuth 콜백 처리 실패:', error)
 
-    let errorMessage = '소셜 로그인 처리 중 오류가 발생했습니다.'
-
-    if (error.response?.status === 401) {
-      errorMessage = '인증 세션이 만료되었습니다. 다시 로그인해주세요.'
-    } else if (error.message) {
-      errorMessage = error.message
-    }
+    localStorage.removeItem('accessToken')
+    localStorage.removeItem('refreshToken')
 
     toast.add({
       severity: 'error',
       summary: '로그인 실패',
-      detail: errorMessage,
+      detail: '소셜 로그인 처리 중 오류가 발생했습니다.',
       life: 5000,
     })
 

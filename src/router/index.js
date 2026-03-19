@@ -34,12 +34,10 @@ const router = createRouter({
       component: () => import('@/views/MainView.vue'),
       meta: { requiresAuth: true },
     },
-    // 기존 /main 경로 호환성 유지 (리다이렉트)
     {
       path: '/main',
       redirect: '/app',
     },
-    // 공개 페이지 (비로그인 접근 가능)
     {
       path: '/public/:slug',
       name: 'public-workspace',
@@ -64,8 +62,8 @@ let isInitialized = false
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
 
-  // 인증이 필요한 페이지일 때만 세션 확인 (한 번만)
-  if (to.meta.requiresAuth && !isInitialized) {
+  // 항상 한 번만 초기화 (페이지 무관)
+  if (!isInitialized) {
     isInitialized = true
     await authStore.loadUserFromStorage()
   }
@@ -78,7 +76,7 @@ router.beforeEach(async (to, from, next) => {
       next()
     }
   }
-  // 비로그인 전용 페이지 (로그인/회원가입)
+  // 비로그인 전용 페이지 (로그인/회원가입) - 이미 로그인된 경우 앱으로
   else if (to.meta.guestOnly && authStore.isAuthenticated) {
     next({ name: 'app' })
   }

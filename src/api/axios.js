@@ -10,26 +10,26 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true,
+  withCredentials: false,
 })
 
-// 401 처리가 필요 없는 경로들 (로그인/회원가입/랜딩 페이지)
 const AUTH_PAGES = ['/login', '/register', '/']
 
-// 요청 인터셉터
+// 요청 인터셉터 - 토큰 자동 주입
 apiClient.interceptors.request.use(
   (config) => {
+    const token = localStorage.getItem('accessToken')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
     return config
   },
-  (error) => {
-    return Promise.reject(error)
-  }
+  (error) => Promise.reject(error)
 )
 
 // 응답 인터셉터
 apiClient.interceptors.response.use(
   (response) => {
-    // 새 API 응답 형식 처리
     if (response.data?.status === 'success' && response.data?.data !== undefined) {
       response.data = response.data.data
     }
@@ -38,7 +38,6 @@ apiClient.interceptors.response.use(
   (error) => {
     const appStore = useAppStore()
 
-    // 네트워크 에러
     if (!error.response) {
       appStore.setError({
         message: '서버에 연결할 수 없습니다. 네트워크 상태를 확인해주세요.',
@@ -47,28 +46,24 @@ apiClient.interceptors.response.use(
       return Promise.reject(error)
     }
 
-    const { status, data } = error.response
+    const { status } = error.response
     const currentPath = router.currentRoute.value.path
 
     switch (status) {
       case 401:
-        // 인증 페이지에서의 401은 로그인 실패이므로 컴포넌트에서 처리하도록 pass
-        // 그 외 페이지에서의 401은 세션 만료
         if (!AUTH_PAGES.includes(currentPath)) {
+          localStorage.removeItem('accessToken')
+          localStorage.removeItem('refreshToken')
           appStore.showSessionExpired()
         }
         break
-
       case 500:
         appStore.setError({
           message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
           code: 'SERVER_ERROR'
         })
         break
-
-      // 400, 403, 404, 409, 422 등 비즈니스 에러는 컴포넌트에서 처리
       default:
-        // 컴포넌트로 전달만 함 (GlobalErrorToast 표시 안 함)
         break
     }
 
