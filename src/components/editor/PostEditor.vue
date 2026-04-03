@@ -9,7 +9,7 @@
         </span>
       </div>
       <div class="topbar-right">
-        <div class="save-indicator" :class="{ saving: isSaving, unsaved: hasUnsavedChanges && !isSaving }">
+        <div v-if="authStore.isAuthenticated" class="save-indicator" :class="{ saving: isSaving, unsaved: hasUnsavedChanges && !isSaving }">
           <Loader2 v-if="isSaving" class="indicator-icon spinning" />
           <Circle v-else-if="hasUnsavedChanges" class="indicator-icon unsaved-dot" />
           <Check v-else class="indicator-icon" />
