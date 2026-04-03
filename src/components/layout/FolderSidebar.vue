@@ -3,6 +3,22 @@
     <!-- 스켈레톤 로딩 -->
     <SidebarSkeleton v-if="isLoading" />
 
+    <!-- 비로그인 상태 -->
+    <template v-else-if="!authStore.isAuthenticated">
+      <div class="guest-sidebar">
+        <div class="guest-sidebar-top">
+          <FolderOpen class="guest-icon" />
+          <p class="guest-title">로그인하면 노트를<br>저장하고 관리할 수 있어요</p>
+        </div>
+        <div class="guest-sidebar-bottom">
+          <div class="guest-menu-item" @click="openAuthModal('login')">
+            <LogIn class="guest-menu-icon" />
+            <span>로그인</span>
+          </div>
+        </div>
+      </div>
+    </template>
+
     <template v-else>
       <!-- 검색 (상단) -->
       <div class="search-box">
@@ -92,7 +108,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
-import { Search, X, FilePlus, FolderPlus, ChevronsUp, ChevronsDown, ArrowUpDown, FolderOpen,  FolderPlus as Folder, FileText } from 'lucide-vue-next'
+import { Search, X, FilePlus, FolderPlus, ChevronsUp, ChevronsDown, ArrowUpDown, FolderOpen, FolderPlus as Folder, FileText, LogIn } from 'lucide-vue-next'
 import TreeNode from './TreeNode.vue'
 import UserMenu from './UserMenu.vue'
 import SidebarSkeleton from '@/components/common/SidebarSkeleton.vue'
@@ -102,12 +118,14 @@ import { useFolderStore } from '@/stores/folderStore'
 import { usePostStore } from '@/stores/postStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { useUiStore } from '@/stores/uiStore'
 import { debounce } from '@/utils/helpers'
 
 const folderStore = useFolderStore()
 const postStore = usePostStore()
 const authStore = useAuthStore()
 const workspaceStore = useWorkspaceStore()
+const uiStore = useUiStore()
 
 const selectedKey = ref(null)
 const contextMenu = ref(null)
@@ -120,6 +138,11 @@ const sortMenu = ref(null)
 const editingKey = ref(null)
 const allExpanded = ref(true)
 const expandAllState = ref(null)
+
+// 인증 모달 - uiStore로 위임
+function openAuthModal(mode) {
+  uiStore.openAuthModal(mode)
+}
 
 // 검색: 입력값과 실제 필터링 쿼리 분리
 const searchInput = ref('')
@@ -674,5 +697,65 @@ function handleRootDrop(event) {
 .stat-icon {
   width: 14px;
   height: 14px;
+}
+
+/* 비로그인 사이드바 */
+.guest-sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.guest-sidebar-top {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.guest-icon {
+  width: 36px;
+  height: 36px;
+  color: var(--text-color-secondary);
+  opacity: 0.4;
+}
+
+.guest-title {
+  font-size: 0.8125rem;
+  color: var(--text-color-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* UserMenu .menu-item 과 동일한 패턴 */
+.guest-sidebar-bottom {
+  border-top: 1px solid var(--surface-border);
+  padding: 0.5rem;
+}
+
+.guest-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+  color: var(--text-color);
+  font-size: 0.875rem;
+}
+
+.guest-menu-item:hover {
+  background: var(--surface-hover);
+}
+
+.guest-menu-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--text-color-secondary);
 }
 </style>

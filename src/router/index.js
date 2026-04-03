@@ -6,6 +6,12 @@ const router = createRouter({
   routes: [
     {
       path: '/',
+      name: 'app',
+      component: () => import('@/views/MainView.vue'),
+      meta: { requiresAuth: false },
+    },
+    {
+      path: '/about',
       name: 'landing',
       component: () => import('@/views/LandingView.vue'),
       meta: { requiresAuth: false },
@@ -30,9 +36,8 @@ const router = createRouter({
     },
     {
       path: '/app',
-      name: 'app',
-      component: () => import('@/views/MainView.vue'),
-      meta: { requiresAuth: true },
+      name: 'app-redirect',
+      redirect: '/',
     },
     {
       path: '/main',
@@ -76,7 +81,7 @@ router.beforeEach(async (to, from, next) => {
       next()
     }
   }
-  // 비로그인 전용 페이지 (로그인/회원가입) - 이미 로그인된 경우 앱으로
+  // 비로그인 전용 페이지 (로그인/회원가입) - 이미 로그인된 경우 메인으로
   else if (to.meta.guestOnly && authStore.isAuthenticated) {
     next({ name: 'app' })
   }

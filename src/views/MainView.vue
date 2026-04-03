@@ -78,6 +78,8 @@ import EditorSkeleton from '@/components/common/EditorSkeleton.vue'
 import { useFolderStore } from '@/stores/folderStore'
 import { usePostStore } from '@/stores/postStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { useAuthStore } from '@/stores/authStore'
+import { useUiStore } from '@/stores/uiStore'
 import { useAuthenticatedAction, useSidebarResize } from '@/composables'
 import { getErrorMessage } from '@/utils/helpers'
 
@@ -93,6 +95,8 @@ const toast = useToast()
 const folderStore = useFolderStore()
 const postStore = usePostStore()
 const workspaceStore = useWorkspaceStore()
+const authStore = useAuthStore()
+const uiStore = useUiStore()
 
 // 컴포저블 사용
 const { executeAuthenticated } = useAuthenticatedAction()
@@ -304,6 +308,11 @@ watch(
 
 onMounted(() => {
   document.addEventListener('keydown', handleGlobalKeydown)
+
+  // 비로그인 상태면 바로 빈 에디터 표시
+  if (!authStore.isAuthenticated) {
+    contentMode.value = 'create'
+  }
 })
 
 onUnmounted(() => {

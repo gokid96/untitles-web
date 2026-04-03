@@ -11,11 +11,14 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
+import { usePostStore } from '@/stores/postStore'
+import { restoreGuestDraft } from '@/utils/helpers'
 import { useToast } from 'primevue/usetoast'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const postStore = usePostStore()
 const toast = useToast()
 
 const statusMessage = ref('로그인 처리 중...')
@@ -70,7 +73,10 @@ onMounted(async () => {
       life: 3000,
     })
 
-    router.replace('/app')
+    // 비로그인 임시 저장 복구
+    await restoreGuestDraft(postStore)
+
+    router.replace('/')
   } catch (error) {
     console.error('OAuth 콜백 처리 실패:', error)
 

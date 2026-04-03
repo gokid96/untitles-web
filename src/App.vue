@@ -6,6 +6,11 @@
     <!-- 글로벌 컴포넌트: 필요할 때만 렌더링 -->
     <SessionExpiredModal v-if="isSessionExpired" />
     <GlobalErrorToast v-if="globalError" />
+    <AuthModal
+      :visible="uiStore.authModalVisible"
+      :initial-mode="uiStore.authModalMode"
+      @close="uiStore.closeAuthModal()"
+    />
   </div>
 </template>
 
@@ -14,6 +19,7 @@ import { computed, defineAsyncComponent } from 'vue'
 import Toast from 'primevue/toast'
 import { useUiStore } from '@/stores/uiStore'
 import { useAppStore } from '@/stores/appStore'
+import AuthModal from '@/components/modals/AuthModal.vue'
 
 // 글로벌 모달 lazy loading
 const SessionExpiredModal = defineAsyncComponent(() =>

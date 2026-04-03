@@ -103,12 +103,14 @@ import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Button from 'primevue/button'
 import { useAuthStore } from '@/stores/authStore'
-import { getErrorMessage } from '@/utils/helpers'
+import { usePostStore } from '@/stores/postStore'
+import { getErrorMessage, restoreGuestDraft } from '@/utils/helpers'
 
 const router = useRouter()
 const route = useRoute()
 const toast = useToast()
 const authStore = useAuthStore()
+const postStore = usePostStore()
 
 const loginId = ref('')
 const password = ref('')
@@ -169,8 +171,12 @@ async function handleLogin() {
 
   try {
     await authStore.login(loginId.value, password.value)
-    // 리다이렉트 쿼리가 있으면 해당 경로로, 없으면 /app으로
-    const redirectPath = route.query.redirect || '/app'
+
+    // 비로그인 임시 저장 복구
+    await restoreGuestDraft(postStore)
+
+    // 리다이렉트 쿼리가 있으면 해당 경로로, 없으면 메인으로
+    const redirectPath = route.query.redirect || '/'
     router.push(redirectPath)
   } catch (error) {
     toast.add({

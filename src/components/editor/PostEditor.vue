@@ -119,7 +119,7 @@
 
 <script setup>
 import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
-import { onBeforeRouteLeave } from 'vue-router'
+import { onBeforeRouteLeave, useRouter } from 'vue-router'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -145,6 +145,8 @@ import {
 import { debounce } from '@/utils/helpers'
 import { useFolderStore } from '@/stores/folderStore'
 import { usePostStore } from '@/stores/postStore'
+import { useAuthStore } from '@/stores/authStore'
+import { useUiStore } from '@/stores/uiStore'
 import { useToast } from 'primevue/usetoast'
 import { imageApi } from '@/api/imageApi'
 import UnsavedChangesModal from '@/components/common/UnsavedChangesModal.vue'
@@ -154,7 +156,13 @@ import LinkPopover from '@/components/editor/LinkPopover.vue'
 const lowlight = createLowlight(common)
 const folderStore = useFolderStore()
 const postStore = usePostStore()
+const authStore = useAuthStore()
+const uiStore = useUiStore()
 const toast = useToast()
+const router = useRouter()
+
+const GUEST_DRAFT_KEY = 'untitles_guest_draft'
+const GUEST_MODAL_THRESHOLD = 50 // 50자 이상 입력하면 모달 표시
 
 const props = defineProps({ post: { type: Object, default: null } })
 
@@ -171,6 +179,8 @@ const isInitializing = ref(false)
 // 저장 직렬화를 위한 상태
 const isSavingInProgress = ref(false)
 const hasPendingSave = ref(false)
+
+// 비로그인 배너 - uiStore로 위임
 
 // 충돌 시 최신 데이터 임시 저장
 const conflictLatestData = ref(null)
@@ -500,7 +510,27 @@ const autoSave = debounce(async () => {
 }, 1000)
 
 function triggerAutoSave() {
+  if (!authStore.isAuthenticated) {
+    saveGuestDraft()
+    // 50자 이상일 때만 모달 표시
+    if (charCount.value >= GUEST_MODAL_THRESHOLD) {
+      uiStore.openAuthModal('register')
+    }
+    return
+  }
   if (props.post?.id && !isInitializing.value) autoSave()
+}
+
+function saveGuestDraft() {
+  try {
+    localStorage.setItem(GUEST_DRAFT_KEY, JSON.stringify({
+      title: formData.value.title,
+      content: formData.value.content,
+      savedAt: new Date().toISOString()
+    }))
+  } catch (e) {
+    console.warn('Guest draft save failed:', e)
+  }
 }
 
 // 브라우저 새로고침/닫기 방지

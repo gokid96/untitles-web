@@ -1,3 +1,25 @@
+// Guest draft 복구 (로그인 완료 후 호출)
+export async function restoreGuestDraft(postStore) {
+  const GUEST_DRAFT_KEY = 'untitles_guest_draft'
+  try {
+    const raw = localStorage.getItem(GUEST_DRAFT_KEY)
+    if (!raw) return
+
+    const draft = JSON.parse(raw)
+    if (!draft?.content && !draft?.title) return
+
+    await postStore.createPost({
+      title: draft.title || '무제',
+      content: draft.content || '',
+      folderId: null,
+    })
+
+    localStorage.removeItem(GUEST_DRAFT_KEY)
+  } catch (e) {
+    console.warn('Guest draft restore failed:', e)
+  }
+}
+
 // 날짜 포맷팅
 export function formatDate(dateString) {
   if (!dateString) return ''

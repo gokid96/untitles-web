@@ -5,6 +5,19 @@ export const useUiStore = defineStore('ui', () => {
   // 다크모드 상태 (index.html에서 이미 클래스 적용됨)
   const isDarkMode = ref(localStorage.getItem('darkMode') !== 'false')
 
+  // 인증 모달
+  const authModalVisible = ref(false)
+  const authModalMode = ref('login') // 'login' | 'register'
+
+  function openAuthModal(mode = 'login') {
+    authModalMode.value = mode
+    authModalVisible.value = true
+  }
+
+  function closeAuthModal() {
+    authModalVisible.value = false
+  }
+
   // 다크모드 토글
   function toggleDarkMode() {
     setDarkMode(!isDarkMode.value)
@@ -41,5 +54,9 @@ export const useUiStore = defineStore('ui', () => {
     setDarkMode,
     enableDarkMode,
     disableDarkMode,
+    authModalVisible,
+    authModalMode,
+    openAuthModal,
+    closeAuthModal,
   }
 })
