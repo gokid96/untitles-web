@@ -54,47 +54,47 @@ const globalError = computed(() => appStore.globalError)
 
 /* CSS Variables - Light Mode */
 :root {
-  /* Primary - 인디고 계열 */
-  --primary-color: #1a1a2e;
+  /* Primary */
+  --primary-color: #111111;
   --primary-color-text: #ffffff;
-  --primary-50: #f8f9fc;
-  --primary-100: #f0f1f7;
-  --primary-200: #e0e2ed;
-  --primary-300: #c5c8d8;
-  --primary-400: #9a9eb8;
-  --primary-500: #6e7394;
-  --primary-600: #525678;
-  --primary-700: #3d4160;
-  --primary-800: #2a2a4a;
-  --primary-900: #1a1a2e;
-  --primary-950: #0f0f1a;
+  --primary-50: #f9f9f9;
+  --primary-100: #f3f3f3;
+  --primary-200: #e8e8e8;
+  --primary-300: #d1d1d1;
+  --primary-400: #a8a8a8;
+  --primary-500: #737373;
+  --primary-600: #545454;
+  --primary-700: #3d3d3d;
+  --primary-800: #2a2a2a;
+  --primary-900: #111111;
+  --primary-950: #0a0a0a;
 
-  /* Accent - 바이올렛 (버튼, 링크 등) */
-  --accent-color: #6366f1;
-  --accent-color-hover: #4f46e5;
-  --accent-color-light: #a5b4fc;
+  /* Accent */
+  --accent-color: #3b82f6;
+  --accent-color-hover: #2563eb;
+  --accent-color-light: #93c5fd;
 
-  /* Surface - 라이트 모드 (부위별 톤 차이) */
-  --surface-ground: #f0f1f7;
-  --surface-sidebar: #e8e9f2;
+  /* Surface - 라이트 모드 */
+  --surface-ground: #f5f5f5;
+  --surface-sidebar: #ebebeb;
   --surface-card: #ffffff;
-  --surface-border: #dcdee8;
-  --surface-hover: #e8e9f2;
+  --surface-border: #e0e0e0;
+  --surface-hover: #e8e8e8;
   --surface-overlay: #ffffff;
-  --surface-section: #f0f1f7;
+  --surface-section: #f5f5f5;
 
   /* Text */
-  --text-color: #1a1a2e;
-  --text-color-secondary: #6e7394;
-  --text-color-muted: #9a9eb8;
+  --text-color: #111111;
+  --text-color-secondary: #737373;
+  --text-color-muted: #a8a8a8;
 
   /* Highlight */
-  --highlight-bg: #eef0f7;
-  --highlight-text-color: #1a1a2e;
+  --highlight-bg: #efefef;
+  --highlight-text-color: #111111;
 
   /* Focus */
-  --focus-ring: rgba(99, 102, 241, 0.25);
-  --focus-ring-alpha: rgba(99, 102, 241, 0.15);
+  --focus-ring: rgba(59, 130, 246, 0.25);
+  --focus-ring-alpha: rgba(59, 130, 246, 0.15);
 
   /* Status Colors */
   --red-500: #ef4444;
@@ -103,38 +103,38 @@ const globalError = computed(() => appStore.globalError)
   --blue-500: #3b82f6;
 }
 
-/* Dark Mode - 🌌 Midnight Aurora (Deeper) */
+/* Dark Mode - Pure Dark */
 .dark-mode {
   /* Primary */
-  --primary-color: #e8eaf0;
-  --primary-color-text: #08080f;
+  --primary-color: #f0f0f0;
+  --primary-color-text: #0a0a0a;
 
-  /* Accent - 밝은 바이올렛 */
-  --accent-color: #818cf8;
-  --accent-color-hover: #a5b4fc;
-  --accent-color-light: #4f46e5;
+  /* Accent */
+  --accent-color: #3b82f6;
+  --accent-color-hover: #60a5fa;
+  --accent-color-light: #1d4ed8;
 
-  /* Surface - 다크 모드 (부위별 톤 차이) */
-  --surface-ground: #0c0c14;
-  --surface-sidebar: #08080f;
-  --surface-card: #12121f;
-  --surface-border: #1e1e32;
-  --surface-hover: #1a1a2e;
-  --surface-overlay: #151522;
-  --surface-section: #0a0a12;
+  /* Surface - 다크 모드 */
+  --surface-ground: #0a0a0a;
+  --surface-sidebar: #111111;
+  --surface-card: #1a1a1a;
+  --surface-border: #2a2a2a;
+  --surface-hover: #222222;
+  --surface-overlay: #1a1a1a;
+  --surface-section: #111111;
 
   /* Text */
-  --text-color: #e8eaf0;
-  --text-color-secondary: #a0a4c0;
-  --text-color-muted: #6e7394;
+  --text-color: #f0f0f0;
+  --text-color-secondary: #a0a0a0;
+  --text-color-muted: #606060;
 
   /* Highlight */
-  --highlight-bg: #2a2a4a;
-  --highlight-text-color: #e8eaf0;
+  --highlight-bg: #222222;
+  --highlight-text-color: #f0f0f0;
 
   /* Focus */
-  --focus-ring: rgba(129, 140, 248, 0.3);
-  --focus-ring-alpha: rgba(129, 140, 248, 0.2);
+  --focus-ring: rgba(59, 130, 246, 0.3);
+  --focus-ring-alpha: rgba(59, 130, 246, 0.2);
 }
 
 /* ============================================
@@ -310,10 +310,10 @@ a:hover {
 }
 
 .p-button.p-button-primary:hover:not(:disabled) {
-  background: var(--primary-800);
-  border-color: var(--primary-800);
+  background: var(--primary-700);
+  border-color: var(--primary-700);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(26, 26, 46, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .dark-mode .p-button.p-button-primary {
@@ -325,7 +325,7 @@ a:hover {
 .dark-mode .p-button.p-button-primary:hover:not(:disabled) {
   background: var(--accent-color-hover);
   border-color: var(--accent-color-hover);
-  box-shadow: 0 4px 16px rgba(129, 140, 248, 0.3);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
 }
 
 /* Text Button */

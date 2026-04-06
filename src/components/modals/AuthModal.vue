@@ -36,6 +36,29 @@
 
           <form v-else @submit.prevent="handleRegister" class="auth-form">
             <div class="form-group">
+              <label>이메일</label>
+              <div class="input-with-btn">
+                <input v-model="registerForm.email" type="email" placeholder="example@email.com" :disabled="emailVerified" :class="{ invalid: registerErrors.email }" />
+                <button type="button" class="code-btn" @click="sendVerificationCode" :disabled="emailVerified || !registerForm.email || isSending">
+                  {{ isSending ? '...' : codeSent ? '재발송' : '인증' }}
+                </button>
+              </div>
+              <small v-if="registerErrors.email">{{ registerErrors.email }}</small>
+            </div>
+            <div class="form-group" v-if="codeSent && !emailVerified">
+              <label>인증번호</label>
+              <div class="input-with-btn">
+                <input v-model="verificationCode" type="text" placeholder="6자리 인증번호" maxlength="6" />
+                <button type="button" class="code-btn" @click="verifyCode" :disabled="verificationCode.length !== 6 || isVerifying">
+                  {{ isVerifying ? '...' : '확인' }}
+                </button>
+              </div>
+              <small class="hint-text">이메일로 발송된 인증번호를 입력해주세요</small>
+            </div>
+            <div class="form-group" v-if="emailVerified">
+              <div class="verified-badge">✓ 이메일 인증 완료</div>
+            </div>
+            <div class="form-group">
               <label>아이디</label>
               <input v-model="registerForm.loginId" type="text" placeholder="아이디를 입력하세요" :class="{ invalid: registerErrors.loginId }" />
               <small v-if="registerErrors.loginId">{{ registerErrors.loginId }}</small>
@@ -55,7 +78,7 @@
               <input v-model="registerForm.passwordConfirm" type="password" placeholder="비밀번호를 다시 입력하세요" :class="{ invalid: registerErrors.passwordConfirm }" />
               <small v-if="registerErrors.passwordConfirm">{{ registerErrors.passwordConfirm }}</small>
             </div>
-            <button type="submit" class="submit-btn" :disabled="isLoading">
+            <button type="submit" class="submit-btn" :disabled="isLoading || !emailVerified">
               {{ isLoading ? '가입 중...' : '회원가입' }}
             </button>
           </form>
@@ -95,6 +118,7 @@ import { ref, reactive, watch } from 'vue'
 import { useAuthStore } from '@/stores/authStore'
 import { usePostStore } from '@/stores/postStore'
 import { useToast } from 'primevue/usetoast'
+import { emailApi } from '@/api/emailApi'
 import { getErrorMessage, restoreGuestDraft } from '@/utils/helpers'
 
 const props = defineProps({
@@ -116,8 +140,24 @@ watch(() => props.initialMode, (val) => { mode.value = val })
 const loginForm = reactive({ loginId: '', password: '' })
 const loginErrors = reactive({ loginId: '', password: '' })
 
-const registerForm = reactive({ loginId: '', nickname: '', password: '', passwordConfirm: '' })
-const registerErrors = reactive({ loginId: '', nickname: '', password: '', passwordConfirm: '' })
+const registerForm = reactive({ loginId: '', nickname: '', email: '', password: '', passwordConfirm: '' })
+const registerErrors = reactive({ email: '', loginId: '', nickname: '', password: '', passwordConfirm: '' })
+
+// 이메일 인증
+const emailVerified = ref(false)
+const codeSent = ref(false)
+const verificationCode = ref('')
+const isSending = ref(false)
+const isVerifying = ref(false)
+
+// 모달 열릴 때 이메일 인증 상태 초기화
+watch(() => props.visible, (val) => {
+  if (val) {
+    emailVerified.value = false
+    codeSent.value = false
+    verificationCode.value = ''
+  }
+})
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8070'
 const OAUTH_BASE_URL = API_BASE_URL.replace('/api/v1', '')
@@ -145,6 +185,40 @@ function validateRegister() {
   return valid
 }
 
+async function sendVerificationCode() {
+  if (!registerForm.email) { registerErrors.email = '이메일을 입력해주세요'; return }
+  isSending.value = true
+  registerErrors.email = ''
+  try {
+    const checkResponse = await emailApi.checkEmail(registerForm.email)
+    if (!checkResponse.data.available) {
+      registerErrors.email = '이미 사용중인 이메일입니다'
+      return
+    }
+    await emailApi.sendCode(registerForm.email)
+    codeSent.value = true
+    verificationCode.value = ''
+    toast.add({ severity: 'success', summary: '발송 완료', detail: '인증번호가 발송되었습니다', life: 3000 })
+  } catch (error) {
+    toast.add({ severity: 'error', summary: '발송 실패', detail: getErrorMessage(error), life: 3000 })
+  } finally {
+    isSending.value = false
+  }
+}
+
+async function verifyCode() {
+  isVerifying.value = true
+  try {
+    await emailApi.verifyCode(registerForm.email, verificationCode.value)
+    emailVerified.value = true
+    toast.add({ severity: 'success', summary: '인증 완료', detail: '이메일 인증이 완료되었습니다', life: 3000 })
+  } catch (error) {
+    toast.add({ severity: 'error', summary: '인증 실패', detail: getErrorMessage(error), life: 3000 })
+  } finally {
+    isVerifying.value = false
+  }
+}
+
 async function handleLogin() {
   if (!validateLogin()) return
   isLoading.value = true
@@ -167,6 +241,7 @@ async function handleRegister() {
     await authStore.register({
       loginId: registerForm.loginId,
       nickname: registerForm.nickname,
+      email: registerForm.email,
       password: registerForm.password,
     })
     await restoreGuestDraft(postStore)
@@ -331,6 +406,56 @@ async function handleRegister() {
 .social-btn.kakao { background: #FEE500; color: #000; }
 .social-btn.naver { background: #03C75A; color: #fff; }
 .social-btn:hover { opacity: 0.9; }
+
+/* 이메일 인증 */
+.input-with-btn {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.input-with-btn input {
+  flex: 1;
+}
+
+.code-btn {
+  padding: 0 0.875rem;
+  background: var(--surface-hover);
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+  color: var(--text-color);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.code-btn:hover:not(:disabled) {
+  background: var(--surface-border);
+}
+
+.code-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.hint-text {
+  font-size: 0.75rem;
+  color: var(--text-color-secondary);
+  margin-top: 0.25rem;
+  display: block;
+}
+
+.verified-badge {
+  padding: 0.625rem 0.875rem;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: 8px;
+  color: #22c55e;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
 
 .modal-enter-active, .modal-leave-active { transition: all 0.2s ease; }
 .modal-enter-from, .modal-leave-to { opacity: 0; }
