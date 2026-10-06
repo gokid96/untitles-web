@@ -38,27 +38,6 @@ const ModernPreset = definePreset(Aura, {
   },
 })
 
-// PrimeVue 컴포넌트
-import Button from 'primevue/button'
-import InputText from 'primevue/inputtext'
-import Password from 'primevue/password'
-import Card from 'primevue/card'
-import Dialog from 'primevue/dialog'
-import Toast from 'primevue/toast'
-import Tree from 'primevue/tree'
-import DataView from 'primevue/dataview'
-import Paginator from 'primevue/paginator'
-import ContextMenu from 'primevue/contextmenu'
-import Dropdown from 'primevue/dropdown'
-import Checkbox from 'primevue/checkbox'
-import Textarea from 'primevue/textarea'
-import Menu from 'primevue/menu'
-import Splitter from 'primevue/splitter'
-import SplitterPanel from 'primevue/splitterpanel'
-import Divider from 'primevue/divider'
-import IconField from 'primevue/iconfield'
-import InputIcon from 'primevue/inputicon'
-
 // PrimeIcons CSS
 import 'primeicons/primeicons.css'
 
@@ -79,26 +58,5 @@ app.use(ToastService)
 
 // 디렉티브
 app.directive('tooltip', Tooltip)
-
-// 글로벌 컴포넌트 등록
-app.component('Button', Button)
-app.component('InputText', InputText)
-app.component('Password', Password)
-app.component('Card', Card)
-app.component('Dialog', Dialog)
-app.component('Toast', Toast)
-app.component('Tree', Tree)
-app.component('DataView', DataView)
-app.component('Paginator', Paginator)
-app.component('ContextMenu', ContextMenu)
-app.component('Dropdown', Dropdown)
-app.component('Checkbox', Checkbox)
-app.component('Textarea', Textarea)
-app.component('Menu', Menu)
-app.component('Splitter', Splitter)
-app.component('SplitterPanel', SplitterPanel)
-app.component('Divider', Divider)
-app.component('IconField', IconField)
-app.component('InputIcon', InputIcon)
 
 app.mount('#app')
