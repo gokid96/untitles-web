@@ -41,7 +41,7 @@ export const useAuthStore = defineStore('auth', () => {
       const workspaceStore = useWorkspaceStore()
       await workspaceStore.loadWorkspaces()
       return true
-    } catch (error) {
+    } catch {
       clearTokens()
       currentUser.value = null
       return false
@@ -64,52 +64,44 @@ export const useAuthStore = defineStore('auth', () => {
 
   // 로그인
   async function login(loginId, password) {
-    try {
-      const response = await userApi.login(loginId, password)
-      const userData = response.data
+    const response = await userApi.login(loginId, password)
+    const userData = response.data
 
-      saveTokens(userData.accessToken, userData.refreshToken)
+    saveTokens(userData.accessToken, userData.refreshToken)
 
-      currentUser.value = {
-        userId: userData.userId,
-        id: userData.userId,
-        loginId: userData.loginId,
-        nickname: userData.nickname,
-        profileImage: userData.profileImage,
-      }
-
-      const workspaceStore = useWorkspaceStore()
-      await workspaceStore.loadWorkspaces()
-
-      return userData
-    } catch (error) {
-      throw error
+    currentUser.value = {
+      userId: userData.userId,
+      id: userData.userId,
+      loginId: userData.loginId,
+      nickname: userData.nickname,
+      profileImage: userData.profileImage,
     }
+
+    const workspaceStore = useWorkspaceStore()
+    await workspaceStore.loadWorkspaces()
+
+    return userData
   }
 
   // 회원가입
   async function register(userData) {
-    try {
-      const response = await userApi.register(userData)
-      const data = response.data
+    const response = await userApi.register(userData)
+    const data = response.data
 
-      saveTokens(data.accessToken, data.refreshToken)
+    saveTokens(data.accessToken, data.refreshToken)
 
-      currentUser.value = {
-        userId: data.userId,
-        id: data.userId,
-        loginId: data.loginId,
-        nickname: data.nickname,
-        profileImage: data.profileImage,
-      }
-
-      const workspaceStore = useWorkspaceStore()
-      await workspaceStore.loadWorkspaces()
-
-      return data
-    } catch (error) {
-      throw error
+    currentUser.value = {
+      userId: data.userId,
+      id: data.userId,
+      loginId: data.loginId,
+      nickname: data.nickname,
+      profileImage: data.profileImage,
     }
+
+    const workspaceStore = useWorkspaceStore()
+    await workspaceStore.loadWorkspaces()
+
+    return data
   }
 
   // 로그아웃
@@ -124,34 +116,20 @@ export const useAuthStore = defineStore('auth', () => {
 
   // 사용자 정보 수정
   async function updateUserInfo(data) {
-    try {
-      const response = await userApi.updateUser(data)
-      const userData = response.data
+    const response = await userApi.updateUser(data)
+    const userData = response.data
 
-      currentUser.value = {
-        ...currentUser.value,
-        userId: userData.userId,
-        id: userData.userId,
-        email: userData.email,
-        loginId: userData.loginId,
-        nickname: userData.nickname,
-        profileImage: userData.profileImage,
-      }
-
-      return userData
-    } catch (error) {
-      throw error
+    currentUser.value = {
+      ...currentUser.value,
+      userId: userData.userId,
+      id: userData.userId,
+      email: userData.email,
+      loginId: userData.loginId,
+      nickname: userData.nickname,
+      profileImage: userData.profileImage,
     }
-  }
 
-  // 회원 탈퇴
-  async function deleteAccount() {
-    try {
-      await userApi.deleteUser()
-      clearAuthData()
-    } catch (error) {
-      throw error
-    }
+    return userData
   }
 
   return {
@@ -163,6 +141,5 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     logout,
     updateUserInfo,
-    deleteAccount,
   }
 })

@@ -7,14 +7,11 @@
       :style="{ width: isSidebarCollapsed ? '0px' : sidebarWidth + 'px' }"
     >
       <FolderSidebar 
-        @folder-selected="handleFolderSelected" 
         @create-folder="handleCreateFolder"
-        @edit-folder="handleEditFolder" 
         @delete-folder="handleDeleteFolder" 
         @create-post="handleCreatePost"
         @create-post-in-folder="handleCreatePostInFolder" 
         @post-selected="handlePostSelected"
-        @edit-post="handleEditPost" 
         @delete-post="handleDeletePost" 
         @move-post="handleMovePost"
         @move-folder="handleMoveFolder" 
@@ -51,14 +48,6 @@
     </main>
 
     <!-- 모달들: 필요할 때만 렌더링 (lazy) -->
-    <FolderModal 
-      v-if="isFolderModalOpen"
-      v-model:visible="isFolderModalOpen" 
-      :folder="selectedFolderForEdit" 
-      :parentId="parentFolderId"
-      @save="handleSaveFolder" 
-    />
-
     <ConfirmDialog 
       v-if="isConfirmDialogOpen"
       v-model:visible="isConfirmDialogOpen" 
@@ -79,14 +68,10 @@ import { useFolderStore } from '@/stores/folderStore'
 import { usePostStore } from '@/stores/postStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useAuthStore } from '@/stores/authStore'
-import { useUiStore } from '@/stores/uiStore'
 import { useAuthenticatedAction, useSidebarResize } from '@/composables'
 import { getErrorMessage } from '@/utils/helpers'
 
 // 모달 컴포넌트 lazy loading
-const FolderModal = defineAsyncComponent(() => 
-  import('@/components/modals/FolderModal.vue')
-)
 const ConfirmDialog = defineAsyncComponent(() => 
   import('@/components/common/ConfirmDialog.vue')
 )
@@ -96,7 +81,6 @@ const folderStore = useFolderStore()
 const postStore = usePostStore()
 const workspaceStore = useWorkspaceStore()
 const authStore = useAuthStore()
-const uiStore = useUiStore()
 
 // 컴포저블 사용
 const { executeAuthenticated } = useAuthenticatedAction()
@@ -117,12 +101,7 @@ const contentMode = ref('empty')
 const isLoadingPost = ref(false)
 
 // 모달 상태
-const isFolderModalOpen = ref(false)
 const isConfirmDialogOpen = ref(false)
-
-// 선택된 항목
-const selectedFolderForEdit = ref(null)
-const parentFolderId = ref(null)
 
 // 삭제 확인
 const confirmDialogMessage = ref('')
@@ -152,25 +131,11 @@ async function handleCreateFolder(parentId) {
   )
 }
 
-function handleEditFolder(folder) {
-  selectedFolderForEdit.value = folder
-  parentFolderId.value = folder.data?.parentFolderId || folder.parentId
-  isFolderModalOpen.value = true
-}
-
 function handleDeleteFolder(folder) {
   deleteTarget.value = folder
   deleteType.value = 'folder'
   confirmDialogMessage.value = '폴더를 삭제하시겠습니까?\n하위 폴더와 게시글도 함께 삭제됩니다.'
   isConfirmDialogOpen.value = true
-}
-
-async function handleSaveFolder(data) {
-  const action = selectedFolderForEdit.value
-    ? () => folderStore.updateFolder(data.id, { name: data.name })
-    : () => folderStore.createFolder(data)
-
-  await executeAuthenticated(action, { errorTitle: '폴더 저장 실패' })
 }
 
 async function handleMoveFolder(folderId, targetFolderId) {
@@ -231,10 +196,6 @@ async function handleCreatePostInFolder(folderId) {
   }
 }
 
-function handleEditPost(post) {
-  handlePostSelected(post)
-}
-
 function handleCancelEdit() {
   contentMode.value = 'empty'
   postStore.clearCurrentPost()
@@ -279,10 +240,6 @@ async function handleConfirmDelete() {
       life: 2000,
     })
   }
-}
-
-function handleFolderSelected(folder) {
-  // 폴더 선택 시 처리
 }
 
 // 전역 단축키

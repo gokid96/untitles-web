@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { folderApi } from '@/api/folderApi'
 import { buildFolderTree } from '@/utils/helpers'
 import { useWorkspaceStore } from './workspaceStore'
@@ -8,27 +8,11 @@ export const useFolderStore = defineStore('folder', () => {
   // 상태
   const folders = ref([])       // 폴더 목록 (트리 구조, posts 포함)
   const rootPosts = ref([])     // 폴더 없는 게시글
-  const selectedFolderId = ref(null)
   const folderTree = ref([])    // UI용 트리 구조
   const sortOption = ref('name_asc')
 
   // 워크스페이스 스토어
   const workspaceStore = useWorkspaceStore()
-
-  // 선택된 폴더
-  const selectedFolder = computed(() => {
-    function findFolder(folderList, id) {
-      for (const folder of folderList) {
-        if (folder.folderId === id) return folder
-        if (folder.children?.length > 0) {
-          const found = findFolder(folder.children, id)
-          if (found) return found
-        }
-      }
-      return null
-    }
-    return findFolder(folders.value, selectedFolderId.value)
-  })
 
   /**
    * 폴더 트리 업데이트 (UI용 트리 구조 생성)
@@ -248,10 +232,6 @@ export const useFolderStore = defineStore('folder', () => {
       // 로컬 상태 업데이트
       removeFolderFromList(folders.value, folderId)
 
-      if (selectedFolderId.value === folderId) {
-        selectedFolderId.value = null
-      }
-
       updateFolderTree()
 
       // 워크스페이스 폴더 count 업데이트
@@ -422,36 +402,19 @@ export const useFolderStore = defineStore('folder', () => {
   }
 
   /**
-   * 폴더 선택
-   */
-  function selectFolder(folderId) {
-    selectedFolderId.value = folderId
-  }
-
-  /**
-   * 폴더 선택 해제
-   */
-  function clearSelection() {
-    selectedFolderId.value = null
-  }
-
-  /**
    * 폴더 데이터 초기화 (워크스페이스 변경 시)
    */
   function clearFolderData() {
     folders.value = []
     rootPosts.value = []
     folderTree.value = []
-    selectedFolderId.value = null
   }
 
   return {
     // 상태
     folders,
     rootPosts,
-    selectedFolderId,
     folderTree,
-    selectedFolder,
     sortOption,
     // 액션
     loadWorkspaceTree,
@@ -459,9 +422,6 @@ export const useFolderStore = defineStore('folder', () => {
     updateFolder,
     deleteFolder,
     moveFolder,
-    selectFolder,
-    clearSelection,
-    updateFolderTree,
     setSortOption,
     clearFolderData,
     // 게시글 로컬 업데이트용

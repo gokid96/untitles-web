@@ -16,7 +16,6 @@
         <AlertTriangle class="icon" />
       </div>
 
-      <!-- <h3>수정 충돌</h3> -->
       <p>다른 곳에서 이 문서를 수정했습니다.</p>
 
       <div class="conflict-actions">
@@ -69,13 +68,6 @@ function handleLoadLatest() {
   width: 40px;
   height: 40px;
   color: #f59e0b;
-}
-
-.conflict-modal h3 {
-  margin: 0 0 0.5rem;
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: var(--text-color);
 }
 
 .conflict-modal p {

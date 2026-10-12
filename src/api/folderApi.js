@@ -77,5 +77,3 @@ export const folderApi = {
     return apiClient.delete(`/workspaces/${workspaceId}/folders/${folderId}`)
   },
 }
-
-export default folderApi

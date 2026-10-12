@@ -163,25 +163,17 @@ p, span, li {
 }
 
 /* 작은 텍스트 */
-small, .text-sm {
+small {
   font-size: 0.875rem;
   line-height: 1.5;
   letter-spacing: 0;
 }
 
-/* 아주 작은 텍스트 */
-.text-xs {
-  font-size: 0.75rem;
-  line-height: 1.4;
-  letter-spacing: 0.01em;
-}
-
 /* 강조 텍스트 */
-strong, b, .font-semibold { font-weight: 600; }
-.font-medium { font-weight: 500; }
+strong, b { font-weight: 600; }
 
 /* 레이블/캡션 */
-label, .label {
+label {
   font-size: 0.875rem;
   font-weight: 500;
   letter-spacing: 0;
@@ -194,38 +186,6 @@ label, .label {
 
 svg[class*="lucide"] {
   stroke-width: 1.75;
-  flex-shrink: 0;
-}
-
-.icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.5rem;
-  border-radius: 8px;
-  color: var(--text-color-secondary);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.icon-btn:hover {
-  background: var(--surface-hover);
-  color: var(--text-color);
-}
-
-.icon-btn:active {
-  transform: scale(0.95);
-}
-
-.icon-text {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.icon-text svg {
   flex-shrink: 0;
 }
 
@@ -476,21 +436,5 @@ a:hover {
 .p-toast .p-toast-message.p-toast-message-warn,
 .p-toast .p-toast-message.p-toast-message-info {
   border-left: none;
-}
-
-/* ============================================
-   Utility Classes
-   ============================================ */
-
-.text-accent {
-  color: var(--accent-color);
-}
-
-.bg-accent {
-  background-color: var(--accent-color);
-}
-
-.border-accent {
-  border-color: var(--accent-color);
 }
 </style>

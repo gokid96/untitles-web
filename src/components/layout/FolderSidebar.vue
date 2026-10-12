@@ -131,7 +131,6 @@ const selectedKey = ref(null)
 const contextMenu = ref(null)
 const contextMenuItems = ref([])
 const isLoading = ref(true)
-const selectedNode = ref(null)
 const isLoadingData = ref(false)
 const isRootDragOver = ref(false)
 const sortMenu = ref(null)
@@ -260,14 +259,11 @@ const sortMenuItems = computed(() => [
 ])
 
 const emit = defineEmits([
-  'folderSelected',
   'createFolder',
-  'editFolder',
   'deleteFolder',
   'createPost',
   'createPostInFolder',
   'postSelected',
-  'editPost',
   'deletePost',
   'movePost',
   'moveFolder'
@@ -325,14 +321,10 @@ function handleNodeClick(node) {
   selectedKey.value = node.key
   if (node.type === 'post') {
     emit('postSelected', node)
-  } else {
-    folderStore.selectFolder(node.id)
-    emit('folderSelected', node)
   }
 }
 
 function handleNodeContextMenu(event) {
-  selectedNode.value = event.node
   if (event.node.type === 'post') {
     contextMenuItems.value = getPostContextMenuItems(event.node)
   } else {
@@ -657,22 +649,6 @@ function handleRootDrop(event) {
 .empty-state p {
   margin: 0 0 1rem;
   font-size: 0.875rem;
-}
-
-.create-btn {
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--surface-border);
-  background: transparent;
-  border-radius: 6px;
-  color: var(--text-color);
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.create-btn:hover {
-  background: var(--surface-hover);
-  border-color: var(--primary-color);
 }
 
 /* 통계 */

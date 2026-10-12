@@ -20,47 +20,6 @@ export async function restoreGuestDraft(postStore) {
   }
 }
 
-// 날짜 포맷팅
-export function formatDate(dateString) {
-  if (!dateString) return ''
-
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffInMs = now - date
-  const diffInHours = diffInMs / (1000 * 60 * 60)
-
-  // 24시간 이내면 상대 시간 표시
-  if (diffInHours < 24) {
-    const diffInMinutes = Math.floor(diffInMs / (1000 * 60))
-    if (diffInMinutes < 60) {
-      return `${diffInMinutes}분 전`
-    }
-    return `${Math.floor(diffInHours)}시간 전`
-  }
-
-  // 그 외에는 날짜 표시
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-
-  // 올해면 년도 생략
-  if (year === now.getFullYear()) {
-    return `${month}-${day}`
-  }
-
-  return `${year}-${month}-${day}`
-}
-
-// 텍스트 미리보기 생성 (첫 N줄)
-export function getPreview(text, lines = 3) {
-  if (!text) return ''
-
-  const lineArray = text.split('\n').filter((line) => line.trim() !== '')
-  const previewLines = lineArray.slice(0, lines)
-
-  return previewLines.join('\n')
-}
-
 // 정렬 함수 (게시글만 정렬, 폴더는 원래 순서 유지)
 function sortNodes(nodes, sortOption) {
   const getTime = (dateValue) => {

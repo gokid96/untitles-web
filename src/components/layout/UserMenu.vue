@@ -15,7 +15,7 @@
 
     <!-- 팝업 메뉴 -->
     <Transition name="menu">
-      <div v-if="isMenuOpen" class="popup-menu" ref="menuRef">
+      <div v-if="isMenuOpen" class="popup-menu">
         <!-- 워크스페이스 -->
         <div class="menu-section">
           <div class="section-label">워크스페이스</div>
@@ -91,7 +91,6 @@
       v-model:visible="isWorkspaceModalOpen"
       :mode="workspaceModalMode"
       @created="handleWorkspaceCreated"
-      @updated="handleWorkspaceUpdated"
       @deleted="handleWorkspaceDeleted"
       @left="handleWorkspaceLeft"
     />
@@ -127,7 +126,6 @@ const isProfileModalOpen = ref(false)
 const isWorkspaceModalOpen = ref(false)
 const workspaceModalMode = ref('create')
 const isPublishModalOpen = ref(false)
-const menuRef = ref(null)
 
 const userInitial = computed(() => {
   return currentUser.value?.nickname?.charAt(0).toUpperCase() || 'U'
@@ -205,8 +203,6 @@ async function handleManageWorkspace(workspace) {
 async function handleWorkspaceCreated(workspace) {
   await handleSelectWorkspace(workspace.workspaceId)
 }
-
-function handleWorkspaceUpdated() {}
 
 async function handleWorkspaceDeleted() {
   if (workspaceStore.workspaces.length > 0) {

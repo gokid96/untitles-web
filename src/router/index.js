@@ -11,12 +11,6 @@ const router = createRouter({
       meta: { requiresAuth: false },
     },
     {
-      path: '/about',
-      name: 'landing',
-      component: () => import('@/views/LandingView.vue'),
-      meta: { requiresAuth: false },
-    },
-    {
       path: '/login',
       name: 'login',
       component: () => import('@/views/LoginView.vue'),
@@ -85,7 +79,7 @@ router.beforeEach(async (to, from, next) => {
   else if (to.meta.guestOnly && authStore.isAuthenticated) {
     next({ name: 'app' })
   }
-  // 그 외 (랜딩페이지 등)
+  // 그 외 (메인, 공개 페이지 등)
   else {
     next()
   }

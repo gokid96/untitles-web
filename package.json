@@ -15,7 +15,6 @@
   },
   "dependencies": {
     "@primeuix/themes": "^1.2.5",
-    "@primevue/themes": "^4.4.1",
     "@tiptap/extension-code-block-lowlight": "^3.13.0",
     "@tiptap/extension-highlight": "^3.16.0",
     "@tiptap/extension-image": "^3.16.0",
@@ -31,7 +30,6 @@
     "@tiptap/extension-underline": "^3.16.0",
     "@tiptap/starter-kit": "^3.13.0",
     "@tiptap/vue-3": "^3.13.0",
-    "@vueuse/core": "^14.0.0",
     "axios": "^1.13.2",
     "lowlight": "^3.3.0",
     "lucide-vue-next": "^0.563.0",

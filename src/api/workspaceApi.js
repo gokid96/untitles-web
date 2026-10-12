@@ -13,12 +13,6 @@ export const workspaceApi = {
     return response
   },
 
-  // 워크스페이스 상세 조회
-  async getWorkspace(workspaceId) {
-    const response = await apiClient.get(`/workspaces/${workspaceId}`)
-    return response
-  },
-
   // 워크스페이스 수정
   async updateWorkspace(workspaceId, data) {
     const response = await apiClient.put(`/workspaces/${workspaceId}`, data)
@@ -67,5 +61,3 @@ export const workspaceApi = {
     return response
   },
 }
-
-export default workspaceApi

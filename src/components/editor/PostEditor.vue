@@ -119,7 +119,7 @@
 
 <script setup>
 import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
-import { onBeforeRouteLeave, useRouter } from 'vue-router'
+import { onBeforeRouteLeave } from 'vue-router'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -159,7 +159,6 @@ const postStore = usePostStore()
 const authStore = useAuthStore()
 const uiStore = useUiStore()
 const toast = useToast()
-const router = useRouter()
 
 const GUEST_DRAFT_KEY = 'untitles_guest_draft'
 const GUEST_MODAL_THRESHOLD = 50 // 50자 이상 입력하면 모달 표시
@@ -169,7 +168,6 @@ const props = defineProps({ post: { type: Object, default: null } })
 const formData = ref({ title: '', content: '', folderId: null })
 const originalData = ref({ title: '', content: '' })
 const currentVersion = ref(null)
-const currentPostId = ref(null)
 const isSaving = ref(false)
 const showUnsavedModal = ref(false)
 const showConflictModal = ref(false)
@@ -179,8 +177,6 @@ const isInitializing = ref(false)
 // 저장 직렬화를 위한 상태
 const isSavingInProgress = ref(false)
 const hasPendingSave = ref(false)
-
-// 비로그인 배너 - uiStore로 위임
 
 // 충돌 시 최신 데이터 임시 저장
 const conflictLatestData = ref(null)
@@ -192,7 +188,6 @@ const linkPopoverPosition = ref({ top: 0, left: 0 })
 
 // 이미지 업로드
 const imageInput = ref(null)
-const isUploadingImage = ref(false)
 
 // 변경사항 체크
 const hasUnsavedChanges = computed(() => {
@@ -324,7 +319,6 @@ async function handleImageUpload(event) {
   }
 
   try {
-    isUploadingImage.value = true
     const response = await imageApi.uploadPostImage(file)
     const url = response.data.url
 
@@ -336,7 +330,6 @@ async function handleImageUpload(event) {
     console.error('Image upload failed:', error)
     toast.add({ severity: 'error', summary: '업로드 실패', detail: '이미지 업로드에 실패했습니다.', life: 3000 })
   } finally {
-    isUploadingImage.value = false
     event.target.value = '' // input 초기화
   }
 }
@@ -585,7 +578,6 @@ watch(
       showConflictModal.value = false
       conflictLatestData.value = null
       isInitializing.value = true
-      currentPostId.value = newId
 
       if (props.post) {
         formData.value = {

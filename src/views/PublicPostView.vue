@@ -67,7 +67,7 @@ async function loadPost() {
   try {
     const response = await publishApi.getPublicPost(slug, postId)
     post.value = response.data
-  } catch (e) {
+  } catch {
     error.value = true
   } finally {
     isLoading.value = false

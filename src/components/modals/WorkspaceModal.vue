@@ -211,7 +211,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['update:visible', 'created', 'updated', 'deleted', 'left'])
+const emit = defineEmits(['update:visible', 'created', 'deleted', 'left'])
 
 const authStore = useAuthStore()
 const workspaceStore = useWorkspaceStore()
@@ -238,7 +238,6 @@ const pendingMembers = ref([])
 // 검색
 const searchEmail = ref('')
 const searchResults = ref([])
-const isSearching = ref(false)
 const showSearchResults = ref(false)
 const inviteRole = ref('MEMBER')
 const invitingUserId = ref(null)
@@ -247,7 +246,6 @@ let searchTimeout = null
 // 삭제
 const isDeleteConfirmOpen = ref(false)
 const deleteConfirmName = ref('')
-const isDeleting = ref(false)
 
 // 권한 옵션
 const availableRoles = [
@@ -453,7 +451,6 @@ function handleSearchInput() {
 
   searchTimeout = setTimeout(async () => {
     try {
-      isSearching.value = true
       const response = await userApi.searchUsers(searchEmail.value)
 
       const excludeIds = isEditMode.value
@@ -464,8 +461,6 @@ function handleSearchInput() {
     } catch (error) {
       console.error('Failed to search users:', error)
       searchResults.value = []
-    } finally {
-      isSearching.value = false
     }
   }, 300)
 }
@@ -543,7 +538,6 @@ async function handleDeleteWorkspace() {
   if (deleteConfirmName.value !== workspaceStore.currentWorkspace?.name) return
 
   try {
-    isDeleting.value = true
     const workspaceId = workspaceStore.currentWorkspaceId
 
     isDeleteConfirmOpen.value = false
@@ -557,8 +551,6 @@ async function handleDeleteWorkspace() {
     console.error('Failed to delete workspace:', error)
     const errorMessage = error.response?.data?.message || '워크스페이스 삭제에 실패했습니다.'
     toast.add({ severity: 'error', summary: '오류', detail: errorMessage, life: 3000 })
-  } finally {
-    isDeleting.value = false
   }
 }
 
@@ -855,13 +847,6 @@ async function confirmLeaveWorkspace() {
 
 .search-item:hover {
   background: var(--surface-hover);
-}
-
-.search-empty {
-  padding: 1rem;
-  text-align: center;
-  color: var(--text-color-secondary);
-  font-size: 0.875rem;
 }
 
 /* 아바타 */

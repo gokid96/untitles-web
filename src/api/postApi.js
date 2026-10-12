@@ -6,7 +6,7 @@ function transformPost(post) {
     id: post.postId,
     title: post.title,
     content: post.content,
-    version: post.version,  // 추가
+    version: post.version,
     folderId: post.folderId,
     createdAt: post.createdAt,
     updatedAt: post.updatedAt,
@@ -59,5 +59,3 @@ export const postApi = {
     return response
   },
 }
-
-export default postApi

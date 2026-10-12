@@ -35,25 +35,12 @@ export const useUiStore = defineStore('ui', () => {
     }
   }
 
-  // 다크모드 활성화
-  function enableDarkMode() {
-    setDarkMode(true)
-  }
-
-  // 다크모드 비활성화
-  function disableDarkMode() {
-    setDarkMode(false)
-  }
-
   // 주의: 초기화 시 클래스 적용 제거
   // index.html에서 이미 적용되므로 여기서 중복 적용하지 않음
 
   return {
     isDarkMode,
     toggleDarkMode,
-    setDarkMode,
-    enableDarkMode,
-    disableDarkMode,
     authModalVisible,
     authModalMode,
     openAuthModal,

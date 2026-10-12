@@ -2,11 +2,11 @@
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="visible" class="modal-overlay" @click.self="handleCancel">
-        <div class="modal-container" ref="modalRef">
+        <div class="modal-container">
           <div class="modal-icon">
             <Trash2 class="icon" />
           </div>
-          <h3 class="modal-title">{{ header || '삭제 확인' }}</h3>
+          <h3 class="modal-title">삭제 확인</h3>
           <p class="modal-message">{{ message }}</p>
           <div class="modal-actions">
             <button class="btn btn-secondary" @click="handleCancel">
@@ -31,19 +31,14 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  header: {
-    type: String,
-    default: '',
-  },
   message: {
     type: String,
     default: '정말 삭제하시겠습니까?',
   },
 })
 
-const emit = defineEmits(['update:visible', 'confirm', 'cancel'])
+const emit = defineEmits(['update:visible', 'confirm'])
 
-const modalRef = ref(null)
 const confirmBtnRef = ref(null)
 
 function handleConfirm() {
@@ -52,7 +47,6 @@ function handleConfirm() {
 }
 
 function handleCancel() {
-  emit('cancel')
   emit('update:visible', false)
 }
 

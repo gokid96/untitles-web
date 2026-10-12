@@ -6,8 +6,6 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   // 상태
   const workspaces = ref([])
   const currentWorkspaceId = ref(null)
-  const members = ref([])
-  const isLoading = ref(false)
   
   // 워크스페이스 생성 제한 정보
   const workspaceLimit = ref({ count: 0, limit: 3 })
@@ -22,15 +20,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     return currentWorkspace.value?.myRole || null
   })
 
-  // 개인 워크스페이스 여부
-  const isPersonalWorkspace = computed(() => {
-    return currentWorkspace.value?.type === 'PERSONAL'
-  })
-
   // 권한 체크
   const isOwner = computed(() => myRole.value === 'OWNER')
   const isAdmin = computed(() => myRole.value === 'OWNER' || myRole.value === 'ADMIN')
-  const canEdit = computed(() => myRole.value !== 'VIEWER')
 
   // 워크스페이스 생성 가능 여부 (백엔드에서 받은 제한 정보 사용)
   const canCreateWorkspace = computed(() => {
@@ -50,7 +42,6 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   // 워크스페이스 목록 로드
   async function loadWorkspaces() {
     try {
-      isLoading.value = true
       const response = await workspaceApi.getMyWorkspaces()
       workspaces.value = response.data
 
@@ -66,8 +57,6 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     } catch (error) {
       console.error('Failed to load workspaces:', error)
       throw error
-    } finally {
-      isLoading.value = false
     }
   }
 
@@ -132,7 +121,6 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   async function loadMembers(workspaceId) {
     try {
       const response = await workspaceApi.getMembers(workspaceId)
-      members.value = response.data
       return response.data
     } catch (error) {
       console.error('Failed to load members:', error)
@@ -144,7 +132,6 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   async function inviteMember(workspaceId, email, role) {
     try {
       const response = await workspaceApi.inviteMember(workspaceId, { email, role })
-      members.value.push(response.data)
       
       // 워크스페이스 목록 갱신 (memberCount 업데이트)
       await loadWorkspaces()
@@ -160,10 +147,6 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   async function updateMemberRole(workspaceId, memberId, role) {
     try {
       const response = await workspaceApi.updateMemberRole(workspaceId, memberId, { role })
-      const index = members.value.findIndex(m => m.memberId === memberId)
-      if (index !== -1) {
-        members.value[index] = response.data
-      }
       return response.data
     } catch (error) {
       console.error('Failed to update member role:', error)
@@ -175,7 +158,6 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   async function removeMember(workspaceId, memberId) {
     try {
       await workspaceApi.removeMember(workspaceId, memberId)
-      members.value = members.value.filter(m => m.memberId !== memberId)
       
       // 워크스페이스 목록 갱신 (memberCount 업데이트)
       await loadWorkspaces()
@@ -207,7 +189,6 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   function clearWorkspaceData() {
     workspaces.value = []
     currentWorkspaceId.value = null
-    members.value = []
     workspaceLimit.value = { count: 0, limit: 3 }
   }
 
@@ -231,20 +212,15 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     // 상태
     workspaces,
     currentWorkspaceId,
-    members,
-    isLoading,
     workspaceLimit,
     // computed
     currentWorkspace,
     myRole,
-    isPersonalWorkspace,
     isOwner,
     isAdmin,
-    canEdit,
     canCreateWorkspace,
     // 액션
     loadWorkspaces,
-    loadWorkspaceLimit,
     createWorkspace,
     selectWorkspace,
     updateWorkspace,

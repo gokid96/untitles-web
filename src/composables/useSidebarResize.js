@@ -53,7 +53,7 @@ export function useSidebarResize(options = {}) {
     localStorage.setItem(storageKey, sidebarWidth.value.toString())
   }
 
-  function startResize(e) {
+  function startResize() {
     // 이미 리사이징 중이면 무시
     if (isResizing.value) return
     
@@ -111,10 +111,8 @@ export function useSidebarResize(options = {}) {
 
   return {
     sidebarWidth,
-    isResizing,
     isSidebarCollapsed,
     startResize,
-    stopResize,
     toggleSidebar
   }
 }

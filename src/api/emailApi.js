@@ -19,5 +19,3 @@ export const emailApi = {
     return response
   },
 }
-
-export default emailApi

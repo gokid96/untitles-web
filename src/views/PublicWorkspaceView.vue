@@ -57,7 +57,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, provide } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { FileText, FileX, BookOpen, Loader2 } from 'lucide-vue-next'
 import { publishApi } from '@/api/publishApi'
@@ -70,15 +70,11 @@ const workspace = ref(null)
 const isLoading = ref(true)
 const error = ref(null)
 
-// 하위 라우트에서 workspace 접근 가능하도록 provide
-provide('publicWorkspace', workspace)
-provide('publicSlug', slug)
-
 onMounted(async () => {
   try {
     const response = await publishApi.getPublicWorkspace(slug)
     workspace.value = response.data
-  } catch (e) {
+  } catch {
     error.value = true
   } finally {
     isLoading.value = false
@@ -90,29 +86,6 @@ onMounted(async () => {
 .public-workspace {
   min-height: 100vh;
   background: var(--surface-ground);
-}
-
-/* 헤더 */
-.public-header {
-  border-bottom: 1px solid var(--surface-border);
-  background: var(--surface-card);
-}
-
-.header-inner {
-  padding: 2rem 2.5rem;
-}
-
-.workspace-title {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: var(--text-color);
-  margin-bottom: 0.25rem;
-}
-
-.workspace-desc {
-  font-size: 0.9375rem;
-  color: var(--text-color-secondary);
-  margin: 0;
 }
 
 /* 본문 레이아웃 */
@@ -282,10 +255,6 @@ onMounted(async () => {
   }
 
   .public-main {
-    padding: 1.5rem;
-  }
-
-  .header-inner {
     padding: 1.5rem;
   }
 }

@@ -9,12 +9,7 @@ export function useAuthenticatedAction() {
   const toast = useToast()
 
   async function executeAuthenticated(action, options = {}) {
-    const {
-      errorTitle = '오류',
-      successTitle = '완료',
-      successMessage = '',
-      showSuccessToast = false
-    } = options
+    const { errorTitle = '오류' } = options
 
     if (!authStore.isAuthenticated) {
       uiStore.openAuthModal('login')
@@ -23,16 +18,6 @@ export function useAuthenticatedAction() {
 
     try {
       const result = await action()
-
-      if (showSuccessToast && successMessage) {
-        toast.add({
-          severity: 'success',
-          summary: successTitle,
-          detail: successMessage,
-          life: 2000,
-        })
-      }
-
       return { success: true, data: result }
     } catch (error) {
       toast.add({
@@ -45,13 +30,7 @@ export function useAuthenticatedAction() {
     }
   }
 
-  function checkAuth() {
-    return authStore.isAuthenticated
-  }
-
   return {
-    executeAuthenticated,
-    checkAuth,
-    isAuthenticated: authStore.isAuthenticated
+    executeAuthenticated
   }
 }

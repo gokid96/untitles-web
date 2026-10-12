@@ -126,7 +126,7 @@ const props = defineProps({
   initialMode: { type: String, default: 'login' }
 })
 
-const emit = defineEmits(['close', 'success'])
+const emit = defineEmits(['close'])
 
 const authStore = useAuthStore()
 const postStore = usePostStore()
@@ -225,7 +225,6 @@ async function handleLogin() {
   try {
     await authStore.login(loginForm.loginId, loginForm.password)
     await restoreGuestDraft(postStore)
-    emit('success')
     emit('close')
   } catch (error) {
     toast.add({ severity: 'error', summary: '로그인 실패', detail: getErrorMessage(error), life: 3000 })
@@ -245,7 +244,6 @@ async function handleRegister() {
       password: registerForm.password,
     })
     await restoreGuestDraft(postStore)
-    emit('success')
     emit('close')
   } catch (error) {
     toast.add({ severity: 'error', summary: '회원가입 실패', detail: getErrorMessage(error), life: 3000 })
