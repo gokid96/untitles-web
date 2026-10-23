@@ -55,7 +55,7 @@
             class="action-btn"
             :class="{ active: uiStore.isLinkPanelOpen }"
             @click="uiStore.toggleLinkPanel()"
-            :title="uiStore.isLinkPanelOpen ? '연결 패널 닫기' : '연결 패널 열기'"
+            :title="uiStore.isLinkPanelOpen ? '그래프 닫기' : '그래프 열기'"
             :aria-pressed="uiStore.isLinkPanelOpen"
           >
             <Waypoints class="action-icon" />

@@ -1,7 +1,6 @@
 <template>
   <div class="link-panel">
     <div class="panel-header">
-      <span class="panel-title">연결</span>
       <div class="scope-toggle" role="tablist">
         <button
           type="button"
@@ -12,7 +11,7 @@
         >이 노트 주변</button>
         <button type="button" role="tab" :class="{ active: scope === 'all' }" @click="scope = 'all'">전체</button>
       </div>
-      <button class="close-btn" type="button" title="연결 패널 닫기" @click="uiStore.toggleLinkPanel()">
+      <button class="close-btn" type="button" title="패널 닫기" @click="uiStore.toggleLinkPanel()">
         <X class="close-icon" />
       </button>
     </div>
@@ -24,7 +23,7 @@
         {{ graphStore.isLoading ? '불러오는 중…' : '노트가 없습니다' }}
       </div>
       <div v-else-if="scope === 'local' && graphData.links.length === 0" class="graph-hint">
-        본문에 <code>[[</code>를 입력해 다른 노트를 연결해 보세요
+        본문에 <code>[[</code>를 입력해 다른 노트를 링크해 보세요
       </div>
     </div>
 
@@ -55,7 +54,7 @@
         <p v-else class="empty">아직 없습니다</p>
       </section>
     </div>
-    <p v-else class="no-post">노트를 열면 연결된 노트가 여기에 표시됩니다</p>
+    <p v-else class="no-post">노트를 열면 링크된 노트가 여기에 표시됩니다</p>
   </div>
 </template>
 
@@ -221,11 +220,6 @@ watch([graphData, () => uiStore.isDarkMode], () => renderGraph())
   gap: 8px;
   padding: 10px 12px;
   border-bottom: 1px solid var(--surface-border);
-}
-
-.panel-title {
-  font-size: 0.875rem;
-  font-weight: 600;
 }
 
 .scope-toggle {
