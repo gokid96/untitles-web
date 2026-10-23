@@ -103,11 +103,15 @@ export const NoteLink = Node.create({
           let renderer
           let popup
 
+          // 커서 아래에 띄우고, 아래 공간이 모자라면 커서 위로 뒤집는다 (본문을 가리지 않게)
           const place = (clientRect) => {
             const rect = clientRect?.()
             if (!rect || !popup) return
-            const top = Math.min(rect.bottom + 6, window.innerHeight - 290)
-            const left = Math.min(rect.left, window.innerWidth - 330)
+            const height = popup.offsetHeight || 0
+            const width = popup.offsetWidth || 0
+            const fitsBelow = rect.bottom + 6 + height <= window.innerHeight - 8
+            const top = fitsBelow ? rect.bottom + 6 : rect.top - height - 6
+            const left = Math.min(rect.left, window.innerWidth - width - 8)
             popup.style.top = `${Math.max(8, top)}px`
             popup.style.left = `${Math.max(8, left)}px`
           }
@@ -121,10 +125,12 @@ export const NoteLink = Node.create({
               popup.appendChild(renderer.element)
               document.body.appendChild(popup)
               place(props.clientRect)
+              requestAnimationFrame(() => place(props.clientRect))
             },
             onUpdate: (props) => {
               renderer?.updateProps(props)
-              place(props.clientRect)
+              // 후보 수가 바뀌면 높이가 달라지므로 그린 뒤 다시 배치
+              requestAnimationFrame(() => place(props.clientRect))
             },
             onKeyDown: (props) => {
               if (props.event.key === 'Escape') {
