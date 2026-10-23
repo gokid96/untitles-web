@@ -48,7 +48,17 @@
     </main>
 
     <!-- 오른쪽 연결 패널 (백링크 + 로컬 그래프): 사이드바 정렬 버튼 옆 버튼으로 열고 닫음 -->
-    <aside v-if="authStore.isAuthenticated && uiStore.isLinkPanelOpen" class="link-panel-aside">
+    <aside
+      v-if="authStore.isAuthenticated && uiStore.isLinkPanelOpen"
+      class="link-panel-aside"
+      :style="{ width: panelWidth + 'px' }"
+    >
+      <div
+        class="panel-resize-handle"
+        :class="{ active: isResizingPanel }"
+        title="드래그해서 너비 조절"
+        @mousedown="startPanelResize"
+      ></div>
       <LinkPanel />
     </aside>
 
@@ -74,7 +84,7 @@ import { usePostStore } from '@/stores/postStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useUiStore } from '@/stores/uiStore'
-import { useAuthenticatedAction, useSidebarResize } from '@/composables'
+import { useAuthenticatedAction, useSidebarResize, usePanelResize } from '@/composables'
 import { getErrorMessage } from '@/utils/helpers'
 
 // 모달 컴포넌트 lazy loading
@@ -87,6 +97,7 @@ const toast = useToast()
 const folderStore = useFolderStore()
 const postStore = usePostStore()
 const uiStore = useUiStore()
+const { panelWidth, isResizingPanel, startPanelResize } = usePanelResize()
 const workspaceStore = useWorkspaceStore()
 const authStore = useAuthStore()
 
@@ -366,11 +377,31 @@ onUnmounted(() => {
   background-color: var(--surface-ground);
 }
 
+.main-content {
+  min-width: 360px;
+}
+
 .link-panel-aside {
-  width: 300px;
+  position: relative;
   height: 100%;
   flex-shrink: 0;
   border-left: 1px solid var(--surface-border);
   background: var(--surface-ground);
+}
+
+.panel-resize-handle {
+  position: absolute;
+  top: 0;
+  left: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 5;
+}
+
+.panel-resize-handle:hover,
+.panel-resize-handle.active {
+  background: var(--primary-color);
+  opacity: 0.35;
 }
 </style>

@@ -923,6 +923,19 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
   border-top: 1px solid var(--surface-border);
   background: var(--surface-ground);
+  /* 에디터 영역이 좁아지면(연결 패널 등) 잘리지 않고 가로 스크롤 */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.editor-toolbar::-webkit-scrollbar {
+  display: none;
+}
+
+.toolbar-group,
+.toolbar-divider,
+.char-count {
+  flex-shrink: 0;
 }
 
 .toolbar-group {

@@ -281,8 +281,8 @@ watch([graphData, () => uiStore.isDarkMode], () => renderGraph())
 
 .graph-wrap {
   position: relative;
-  height: 280px;
-  flex-shrink: 0;
+  flex: 0 0 58%;
+  min-height: 300px;
   border-bottom: 1px solid var(--surface-border);
 }
 
