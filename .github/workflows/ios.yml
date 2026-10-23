@@ -1,0 +1,114 @@
+# iOS 앱 빌드 (Mac 없이 GitHub의 macOS 클라우드에서 빌드)
+# - push: ios/ 나 앱 설정이 바뀌면 서명 없이 빌드만 확인
+# - 수동 실행(Actions 탭 > iOS > Run workflow): 서명 후 App Store Connect(TestFlight)에 업로드
+#
+# 업로드에 필요한 저장소 Secrets (Settings > Secrets and variables > Actions)
+#   APPLE_TEAM_ID   Apple Developer 팀 ID (10자리)
+#   ASC_KEY_ID      App Store Connect API 키 ID
+#   ASC_ISSUER_ID   App Store Connect API Issuer ID
+#   ASC_KEY_P8      API 키 파일(.p8) 내용 전체 (-----BEGIN PRIVATE KEY----- 포함)
+#   API 키 권한은 Admin 이어야 배포 인증서를 자동으로 만들 수 있다.
+name: iOS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ios/**'
+      - 'capacitor.config.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/ios.yml'
+  workflow_dispatch:
+    inputs:
+      upload:
+        description: 'App Store Connect(TestFlight)에 업로드'
+        type: boolean
+        default: true
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ios:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    env:
+      UPLOAD: ${{ github.event_name == 'workflow_dispatch' && inputs.upload }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: 웹 빌드 + iOS 동기화
+        run: |
+          npm ci
+          npx vite build
+          npx cap sync ios
+
+      - name: 서명 없이 빌드 확인
+        if: env.UPLOAD != 'true'
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build | tail -n 40
+
+      - name: App Store Connect API 키 준비
+        if: env.UPLOAD == 'true'
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          if [ -z "$ASC_KEY_P8" ] || [ -z "$ASC_KEY_ID" ]; then
+            echo "::error::ASC_KEY_P8 / ASC_KEY_ID Secrets가 없습니다. 워크플로 파일 상단 안내를 참고하세요."
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/keys"
+          printf '%s\n' "$ASC_KEY_P8" > "$RUNNER_TEMP/keys/AuthKey_$ASC_KEY_ID.p8"
+
+      - name: 아카이브 (자동 서명, 빌드 번호 = 실행 번호)
+        if: env.UPLOAD == 'true'
+        env:
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" archive \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_$ASC_KEY_ID.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}" | tail -n 40
+
+      - name: App Store Connect 업로드
+        if: env.UPLOAD == 'true'
+        env:
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          /usr/libexec/PlistBuddy -c "Add :teamID string $TEAM_ID" ios/App/ExportOptions.plist
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -exportOptionsPlist ios/App/ExportOptions.plist \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_$ASC_KEY_ID.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+          echo "업로드 완료: App Store Connect > TestFlight에서 처리(10~30분) 후 확인하세요."
+
+      - name: API 키 삭제
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/keys"
