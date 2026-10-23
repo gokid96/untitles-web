@@ -101,9 +101,8 @@
 </template>
 
 <script setup>
-// 출시 전에 실제 운영자 이름과 연락처로 바꿔 주세요
-const OPERATOR = '[운영자 이름]'
-const CONTACT_EMAIL = 'privacy@untitles.net'
+const OPERATOR = '고성민'
+const CONTACT_EMAIL = 'sungmin360@nate.com'
 const EFFECTIVE_DATE = '2026년 11월 1일'
 </script>
 

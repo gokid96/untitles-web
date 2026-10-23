@@ -14,7 +14,7 @@ App Store Connect에 그대로 붙여넣을 수 있게 정리한 값입니다. `
 | 가격 | 무료 |
 | 지원 URL | https://untitles.net |
 | 개인정보처리방침 URL | https://untitles.net/privacy |
-| 저작권 | 2026 [운영자 이름] |
+| 저작권 | 2026 고성민 |
 
 > 앱 이름이 이미 쓰이고 있다면 대안: `Untitles 노트`, `Untitles: 노트와 그래프`
 

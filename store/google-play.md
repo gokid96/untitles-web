@@ -95,7 +95,7 @@ Play 앱 서명은 기본으로 켜져 있습니다(Google이 앱 서명 키를 
 | 그래픽 이미지 (1024×500) | `store/google-play/feature-graphic.png` |
 | 휴대전화 스크린샷 (1080×1920) | `store/screenshots/android-phone/` 4장 (순서대로) |
 
-**카테고리**: 생산성 / **연락처 이메일**: `[문의 이메일]` / **웹사이트**: https://untitles.net
+**카테고리**: 생산성 / **연락처 이메일**: sungmin360@nate.com / **웹사이트**: https://untitles.net
 
 ## 7. 비공개 테스트 → 프로덕션
 
