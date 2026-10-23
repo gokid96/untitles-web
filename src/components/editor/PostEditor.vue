@@ -475,7 +475,7 @@ function handleLoadLatest() {
     content: conflictLatestData.value.content || ''
   }
   if (editor.value) {
-    editor.value.commands.setContent(conflictLatestData.value.content || '')
+    loadIntoEditor(conflictLatestData.value.content || '')
   }
 
   conflictLatestData.value = null
@@ -582,6 +582,18 @@ function handleCancelLeave() {
 }
 
 // post.id 변경 시 (다른 게시글로 전환)
+/**
+ * 에디터에 내용을 넣고, 에디터가 정규화한 HTML을 "저장된 상태" 기준으로 삼는다.
+ * 서버가 돌려준 HTML(정화 과정에서 체크리스트·표 마크업이 조금 달라짐)을 그대로 기준으로 쓰면
+ * 노트를 열기만 해도 '저장되지 않음'으로 표시되던 문제 방지
+ */
+function loadIntoEditor(content) {
+  editor.value.commands.setContent(content)
+  const normalized = editor.value.getHTML()
+  formData.value.content = normalized
+  originalData.value = { ...originalData.value, content: normalized }
+}
+
 watch(
   () => props.post?.id,
   (newId, oldId) => {
@@ -605,7 +617,7 @@ watch(
         currentVersion.value = props.post.version
 
         if (editor.value) {
-          editor.value.commands.setContent(props.post.content || '')
+          loadIntoEditor(props.post.content || '')
         }
       } else {
         formData.value = { title: '', content: '', folderId: null }
@@ -630,7 +642,7 @@ watch(
   (newEditor) => {
     if (newEditor && formData.value.content) {
       isInitializing.value = true
-      newEditor.commands.setContent(formData.value.content)
+      loadIntoEditor(formData.value.content)
       setTimeout(() => {
         isInitializing.value = false
       }, 100)
