@@ -51,6 +51,15 @@
           <button class="action-btn" @click="toggleSortMenu" title="정렬">
             <ArrowUpDown class="action-icon" />
           </button>
+          <button
+            class="action-btn"
+            :class="{ active: uiStore.isLinkPanelOpen }"
+            @click="uiStore.toggleLinkPanel()"
+            :title="uiStore.isLinkPanelOpen ? '연결 패널 닫기' : '연결 패널 열기'"
+            :aria-pressed="uiStore.isLinkPanelOpen"
+          >
+            <Waypoints class="action-icon" />
+          </button>
         </div>
         <Menu ref="sortMenu" :model="sortMenuItems" :popup="true" />
       </div>
@@ -108,7 +117,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
-import { Search, X, FilePlus, FolderPlus, ChevronsUp, ChevronsDown, ArrowUpDown, FolderOpen, FolderPlus as Folder, FileText, LogIn } from 'lucide-vue-next'
+import { Search, X, FilePlus, FolderPlus, ChevronsUp, ChevronsDown, ArrowUpDown, Waypoints, FolderOpen, FolderPlus as Folder, FileText, LogIn } from 'lucide-vue-next'
 import TreeNode from './TreeNode.vue'
 import UserMenu from './UserMenu.vue'
 import SidebarSkeleton from '@/components/common/SidebarSkeleton.vue'
@@ -608,6 +617,11 @@ function handleRootDrop(event) {
 .action-btn:hover {
   background: var(--surface-hover);
   color: var(--text-color);
+}
+
+.action-btn.active {
+  background: var(--surface-hover);
+  color: var(--primary-color);
 }
 
 .action-icon {

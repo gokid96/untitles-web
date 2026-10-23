@@ -975,6 +975,7 @@ onBeforeUnmount(() => {
 .char-count {
   font-size: 0.75rem;
   color: var(--text-color-secondary);
+  white-space: nowrap;
 }
 
 /* 테이블 스타일 */

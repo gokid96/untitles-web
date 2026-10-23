@@ -47,6 +47,11 @@
       />
     </main>
 
+    <!-- 오른쪽 연결 패널 (백링크 + 로컬 그래프): 사이드바 정렬 버튼 옆 버튼으로 열고 닫음 -->
+    <aside v-if="authStore.isAuthenticated && uiStore.isLinkPanelOpen" class="link-panel-aside">
+      <LinkPanel />
+    </aside>
+
     <!-- 모달들: 필요할 때만 렌더링 (lazy) -->
     <ConfirmDialog 
       v-if="isConfirmDialogOpen"
@@ -73,6 +78,7 @@ import { useAuthenticatedAction, useSidebarResize } from '@/composables'
 import { getErrorMessage } from '@/utils/helpers'
 
 // 모달 컴포넌트 lazy loading
+const LinkPanel = defineAsyncComponent(() => import('@/components/layout/LinkPanel.vue'))
 const ConfirmDialog = defineAsyncComponent(() => 
   import('@/components/common/ConfirmDialog.vue')
 )
@@ -358,5 +364,13 @@ onUnmounted(() => {
   height: 100%;
   overflow: hidden;
   background-color: var(--surface-ground);
+}
+
+.link-panel-aside {
+  width: 300px;
+  height: 100%;
+  flex-shrink: 0;
+  border-left: 1px solid var(--surface-border);
+  background: var(--surface-ground);
 }
 </style>
