@@ -129,9 +129,10 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   }
 
   // 멤버 초대
-  async function inviteMember(workspaceId, email, role) {
+  // 이메일 없이 가입한 사용자도 있으므로 userId로 초대
+  async function inviteMember(workspaceId, userId, role) {
     try {
-      const response = await workspaceApi.inviteMember(workspaceId, { email, role })
+      const response = await workspaceApi.inviteMember(workspaceId, { userId, role })
       
       // 워크스페이스 목록 갱신 (memberCount 업데이트)
       await loadWorkspaces()

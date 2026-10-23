@@ -419,9 +419,9 @@ async function handleSubmit() {
       if (pendingMembers.value.length > 0) {
         for (const member of pendingMembers.value) {
           try {
-            await workspaceStore.inviteMember(workspace.workspaceId, member.email, member.role)
+            await workspaceStore.inviteMember(workspace.workspaceId, member.userId, member.role)
           } catch (error) {
-            console.error(`Failed to invite ${member.email}:`, error)
+            console.error(`Failed to invite ${member.nickname}:`, error)
           }
         }
         await workspaceStore.loadWorkspaces()
@@ -475,7 +475,7 @@ async function handleAddMember(user) {
 
     try {
       invitingUserId.value = user.userId
-      await workspaceStore.inviteMember(workspaceStore.currentWorkspaceId, user.email, inviteRole.value)
+      await workspaceStore.inviteMember(workspaceStore.currentWorkspaceId, user.userId, inviteRole.value)
       searchResults.value = searchResults.value.filter(u => u.userId !== user.userId)
       await loadMembers()
       await workspaceStore.loadWorkspaces()

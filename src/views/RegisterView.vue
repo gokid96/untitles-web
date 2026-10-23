@@ -12,20 +12,7 @@
 
       <!-- 회원가입 폼 -->
       <form @submit.prevent="handleRegister" class="register-form">
-        <!-- 이메일 (인증 꺼짐) -->
-        <div class="form-group" v-if="!emailVerificationRequired">
-          <label for="email">이메일</label>
-          <InputText
-            id="email"
-            v-model="formData.email"
-            type="email"
-            placeholder="example@email.com"
-            :class="{ 'p-invalid': errors.email }"
-          />
-          <small v-if="errors.email" class="error-text">{{ errors.email }}</small>
-        </div>
-
-        <!-- 이메일 인증 -->
+        <!-- 이메일 인증: VITE_EMAIL_VERIFICATION_REQUIRED=true일 때만 표시 (현재 임시로 숨김) -->
         <div class="form-group" v-if="emailVerificationRequired">
           <label for="email">이메일</label>
           <div class="input-with-button">
@@ -190,13 +177,6 @@ function validate() {
   let isValid = true
   Object.keys(errors).forEach(key => errors[key] = '')
 
-  if (!formData.email.trim()) {
-    errors.email = '이메일을 입력해주세요'
-    isValid = false
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-    errors.email = '올바른 이메일 형식이 아닙니다'
-    isValid = false
-  }
 
   if (!formData.loginId.trim()) {
     errors.loginId = '아이디를 입력해주세요'
@@ -312,7 +292,7 @@ async function handleRegister() {
   isLoading.value = true
 
   try {
-    await authStore.register(formData)
+    await authStore.register(emailVerificationRequired ? formData : { ...formData, email: undefined })
     router.push('/app')
   } catch (error) {
     toast.add({

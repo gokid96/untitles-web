@@ -35,7 +35,8 @@
           </form>
 
           <form v-else @submit.prevent="handleRegister" class="auth-form">
-            <div class="form-group">
+            <!-- 이메일 인증: VITE_EMAIL_VERIFICATION_REQUIRED=true일 때만 표시 (현재 임시로 숨김) -->
+            <div class="form-group" v-if="emailVerificationRequired">
               <label>이메일</label>
               <div class="input-with-btn">
                 <input v-model="registerForm.email" type="email" placeholder="example@email.com" :disabled="emailVerified" :class="{ invalid: registerErrors.email }" />
@@ -45,7 +46,7 @@
               </div>
               <small v-if="registerErrors.email">{{ registerErrors.email }}</small>
             </div>
-            <div class="form-group" v-if="codeSent && !emailVerified">
+            <div class="form-group" v-if="emailVerificationRequired && codeSent && !emailVerified">
               <label>인증번호</label>
               <div class="input-with-btn">
                 <input v-model="verificationCode" type="text" placeholder="6자리 인증번호" maxlength="6" />
@@ -55,7 +56,7 @@
               </div>
               <small class="hint-text">이메일로 발송된 인증번호를 입력해주세요</small>
             </div>
-            <div class="form-group" v-if="emailVerified">
+            <div class="form-group" v-if="emailVerificationRequired && emailVerified">
               <div class="verified-badge">✓ 이메일 인증 완료</div>
             </div>
             <div class="form-group">
@@ -78,7 +79,7 @@
               <input v-model="registerForm.passwordConfirm" type="password" placeholder="비밀번호를 다시 입력하세요" :class="{ invalid: registerErrors.passwordConfirm }" />
               <small v-if="registerErrors.passwordConfirm">{{ registerErrors.passwordConfirm }}</small>
             </div>
-            <button type="submit" class="submit-btn" :disabled="isLoading || !emailVerified">
+            <button type="submit" class="submit-btn" :disabled="isLoading || (emailVerificationRequired && !emailVerified)">
               {{ isLoading ? '가입 중...' : '회원가입' }}
             </button>
           </form>
@@ -144,6 +145,7 @@ const registerForm = reactive({ loginId: '', nickname: '', email: '', password: 
 const registerErrors = reactive({ email: '', loginId: '', nickname: '', password: '', passwordConfirm: '' })
 
 // 이메일 인증
+const emailVerificationRequired = import.meta.env.VITE_EMAIL_VERIFICATION_REQUIRED === 'true'
 const emailVerified = ref(false)
 const codeSent = ref(false)
 const verificationCode = ref('')
@@ -240,7 +242,7 @@ async function handleRegister() {
     await authStore.register({
       loginId: registerForm.loginId,
       nickname: registerForm.nickname,
-      email: registerForm.email,
+      ...(emailVerificationRequired && { email: registerForm.email }),
       password: registerForm.password,
     })
     await restoreGuestDraft(postStore)
