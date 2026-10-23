@@ -12,8 +12,21 @@
 
       <!-- 회원가입 폼 -->
       <form @submit.prevent="handleRegister" class="register-form">
+        <!-- 이메일 (인증 꺼짐) -->
+        <div class="form-group" v-if="!emailVerificationRequired">
+          <label for="email">이메일</label>
+          <InputText
+            id="email"
+            v-model="formData.email"
+            type="email"
+            placeholder="example@email.com"
+            :class="{ 'p-invalid': errors.email }"
+          />
+          <small v-if="errors.email" class="error-text">{{ errors.email }}</small>
+        </div>
+
         <!-- 이메일 인증 -->
-        <div class="form-group">
+        <div class="form-group" v-if="emailVerificationRequired">
           <label for="email">이메일</label>
           <div class="input-with-button">
             <InputText 
@@ -37,7 +50,7 @@
         </div>
 
         <!-- 인증번호 입력 -->
-        <div class="form-group" v-if="codeSent && !emailVerified">
+        <div class="form-group" v-if="emailVerificationRequired && codeSent && !emailVerified">
           <label for="verificationCode">인증번호</label>
           <div class="input-with-button">
             <InputText 
@@ -59,7 +72,7 @@
         </div>
 
         <!-- 인증 완료 -->
-        <div class="form-group" v-if="emailVerified">
+        <div class="form-group" v-if="emailVerificationRequired && emailVerified">
           <div class="verified-badge">
             <CheckCircle class="verified-icon" />
             <span>이메일 인증 완료</span>
@@ -118,7 +131,7 @@
           type="submit" 
           label="가입하기" 
           :loading="isLoading"
-          :disabled="!emailVerified || isLoading"
+          :disabled="(emailVerificationRequired && !emailVerified) || isLoading"
           class="submit-button"
         />
       </form>
@@ -165,7 +178,8 @@ const errors = reactive({
   passwordConfirm: ''
 })
 
-// 이메일 인증
+// 이메일 인증 (VITE_EMAIL_VERIFICATION_REQUIRED=true일 때만 사용, 서버 설정과 맞춰야 함)
+const emailVerificationRequired = import.meta.env.VITE_EMAIL_VERIFICATION_REQUIRED === 'true'
 const emailVerified = ref(false)
 const codeSent = ref(false)
 const verificationCode = ref('')
@@ -175,6 +189,14 @@ const isVerifying = ref(false)
 function validate() {
   let isValid = true
   Object.keys(errors).forEach(key => errors[key] = '')
+
+  if (!formData.email.trim()) {
+    errors.email = '이메일을 입력해주세요'
+    isValid = false
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    errors.email = '올바른 이메일 형식이 아닙니다'
+    isValid = false
+  }
 
   if (!formData.loginId.trim()) {
     errors.loginId = '아이디를 입력해주세요'
@@ -275,7 +297,7 @@ async function verifyCode() {
 }
 
 async function handleRegister() {
-  if (!emailVerified.value) {
+  if (emailVerificationRequired && !emailVerified.value) {
     toast.add({
       severity: 'warn',
       summary: '인증 필요',
