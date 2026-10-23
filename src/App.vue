@@ -437,4 +437,12 @@ a:hover {
 .p-toast .p-toast-message.p-toast-message-info {
   border-left: none;
 }
+
+/* 좁은 화면에서 PrimeVue 다이얼로그가 화면 밖으로 넘치지 않게 */
+@media (max-width: 768px) {
+  .p-dialog {
+    max-width: calc(100vw - 24px) !important;
+    max-height: calc(100dvh - 48px);
+  }
+}
 </style>

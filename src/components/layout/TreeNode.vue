@@ -11,6 +11,10 @@
       :draggable="!isEditing"
       @click="handleClick"
       @contextmenu.prevent="handleContextMenu"
+      @touchstart.passive="startLongPress"
+      @touchmove.passive="cancelLongPress"
+      @touchend="endLongPress"
+      @touchcancel="cancelLongPress"
       @dragstart="handleDragStart"
       @dragover.prevent="handleDragOver"
       @drop.prevent="handleDrop"
@@ -130,6 +134,33 @@ function toggleExpand() {
 
 function handleClick() {
   emit('node-click', props.node)
+}
+
+// 터치 기기: 길게 누르면 메뉴 열기 (iOS는 길게 눌러도 contextmenu 이벤트가 오지 않음)
+let longPressTimer = null
+let longPressFired = false
+
+function startLongPress(event) {
+  longPressFired = false
+  const touch = event.touches[0]
+  longPressTimer = setTimeout(() => {
+    longPressFired = true
+    emit('node-context-menu', {
+      node: props.node,
+      originalEvent: { ...event, clientX: touch.clientX, clientY: touch.clientY, pageX: touch.pageX, pageY: touch.pageY,
+        preventDefault: () => {}, stopPropagation: () => {}, currentTarget: event.currentTarget, target: event.target },
+    })
+  }, 500)
+}
+
+function cancelLongPress() {
+  clearTimeout(longPressTimer)
+}
+
+function endLongPress(event) {
+  clearTimeout(longPressTimer)
+  // 길게 눌러 메뉴를 연 경우 이어지는 클릭(노트 열기)은 막는다
+  if (longPressFired) event.preventDefault()
 }
 
 function handleContextMenu(event) {

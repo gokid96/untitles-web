@@ -1,10 +1,13 @@
 <template>
-  <div class="main-layout">
+  <div class="main-layout" :class="{ mobile: isMobile }">
+    <!-- 모바일: 사이드바를 서랍으로, 바깥을 누르면 닫힘 -->
+    <div v-if="isMobile && !isSidebarCollapsed" class="drawer-backdrop" @click="toggleSidebar"></div>
+
     <!-- 사이드바 -->
     <aside 
       class="sidebar" 
-      :class="{ collapsed: isSidebarCollapsed }"
-      :style="{ width: isSidebarCollapsed ? '0px' : sidebarWidth + 'px' }"
+      :class="{ collapsed: isSidebarCollapsed, 'mobile-drawer': isMobile }"
+      :style="isMobile ? null : { width: isSidebarCollapsed ? '0px' : sidebarWidth + 'px' }"
     >
       <FolderSidebar 
         @create-folder="handleCreateFolder"
@@ -20,7 +23,7 @@
 
     <!-- 리사이즈 핸들 -->
     <div 
-      v-if="!isSidebarCollapsed"
+      v-if="!isSidebarCollapsed && !isMobile"
       class="resize-handle"
       :style="{ left: sidebarWidth + 'px' }"
       @mousedown="startResize"
@@ -28,12 +31,18 @@
 
     <!-- 사이드바 토글 버튼 -->
     <button 
+      v-if="!isMobile"
       class="sidebar-toggle" 
       :style="{ left: isSidebarCollapsed ? '0px' : sidebarWidth + 'px' }"
       @click="toggleSidebar" 
       :title="isSidebarCollapsed ? '사이드바 열기' : '사이드바 닫기'"
     >
       <i :class="isSidebarCollapsed ? 'pi pi-chevron-right' : 'pi pi-chevron-left'"></i>
+    </button>
+
+    <!-- 모바일 메뉴 버튼 -->
+    <button v-if="isMobile" class="mobile-menu-btn" type="button" aria-label="메뉴 열기" @click="toggleSidebar">
+      <i class="pi pi-bars"></i>
     </button>
 
     <!-- 메인 컨텐츠 -->
@@ -51,9 +60,11 @@
     <aside
       v-if="authStore.isAuthenticated && uiStore.isLinkPanelOpen"
       class="link-panel-aside"
-      :style="{ width: panelWidth + 'px' }"
+      :class="{ 'mobile-sheet': isMobile }"
+      :style="isMobile ? null : { width: panelWidth + 'px' }"
     >
       <div
+        v-if="!isMobile"
         class="panel-resize-handle"
         :class="{ active: isResizingPanel }"
         title="드래그해서 너비 조절"
@@ -164,6 +175,24 @@ async function handleMoveFolder(folderId, targetFolderId) {
   )
 }
 
+// 모바일(좁은 화면): 사이드바는 서랍, 그래프 패널은 전체 화면
+const isMobile = ref(false)
+let mobileQuery = null
+
+function applyMobileLayout() {
+  isMobile.value = mobileQuery.matches
+  if (isMobile.value) isSidebarCollapsed.value = true
+}
+
+function closeDrawerOnMobile() {
+  if (isMobile.value) isSidebarCollapsed.value = true
+}
+
+// 모바일에서 그래프 패널을 열면 서랍은 닫는다
+watch(() => uiStore.isLinkPanelOpen, (open) => {
+  if (open) closeDrawerOnMobile()
+})
+
 // 노트 링크·연결 패널에서 다른 노트 열기
 watch(() => uiStore.openPostRequest, (request) => {
   if (request?.postId && request.postId !== postStore.currentPost?.id) {
@@ -173,6 +202,8 @@ watch(() => uiStore.openPostRequest, (request) => {
 
 // 게시글 이벤트
 async function handlePostSelected(post) {
+  closeDrawerOnMobile()
+  if (isMobile.value && uiStore.isLinkPanelOpen) uiStore.toggleLinkPanel()
   isLoadingPost.value = true
   contentMode.value = 'edit'
   
@@ -204,6 +235,7 @@ async function handleCreatePost() {
 
   if (result.success) {
     contentMode.value = 'edit'
+    closeDrawerOnMobile()
   }
 }
 
@@ -291,6 +323,9 @@ watch(
 
 onMounted(() => {
   document.addEventListener('keydown', handleGlobalKeydown)
+  mobileQuery = window.matchMedia('(max-width: 768px)')
+  applyMobileLayout()
+  mobileQuery.addEventListener('change', applyMobileLayout)
 
   // 비로그인 상태면 바로 빈 에디터 표시
   if (!authStore.isAuthenticated) {
@@ -300,6 +335,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('keydown', handleGlobalKeydown)
+  mobileQuery?.removeEventListener('change', applyMobileLayout)
 })
 </script>
 
@@ -307,6 +343,9 @@ onUnmounted(() => {
 .main-layout {
   display: flex;
   height: 100vh;
+  height: 100dvh;
+  /* 앱(노치·상태바·홈 표시줄) 안전 영역. 일반 브라우저에서는 0 */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   background-color: var(--surface-ground);
   overflow: hidden;
   position: relative;
@@ -403,5 +442,67 @@ onUnmounted(() => {
 .panel-resize-handle.active {
   background: var(--primary-color);
   opacity: 0.35;
+}
+
+/* ===== 모바일 (768px 이하) ===== */
+.main-layout.mobile .main-content {
+  min-width: 0;
+}
+
+.mobile-menu-btn {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 6px);
+  left: calc(env(safe-area-inset-left) + 6px);
+  z-index: 150;
+  width: 40px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-color);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.mobile-menu-btn:active {
+  background: var(--surface-hover);
+}
+
+.sidebar.mobile-drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 300;
+  width: min(85vw, 320px);
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  transition: transform 0.22s ease;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.35);
+}
+
+.sidebar.mobile-drawer.collapsed {
+  width: min(85vw, 320px) !important;
+  transform: translateX(-105%);
+  box-shadow: none;
+}
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 290;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.link-panel-aside.mobile-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 280;
+  border-left: none;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 </style>

@@ -1025,4 +1025,23 @@ onBeforeUnmount(() => {
 :deep(.tiptap img.ProseMirror-selectednode) {
   outline: 2px solid var(--primary-color);
 }
+
+/* ===== 모바일 (768px 이하) ===== */
+@media (max-width: 768px) {
+  .editor-topbar {
+    padding: 0.75rem 1rem 0.75rem 3.25rem; /* 왼쪽은 메뉴 버튼 자리 */
+  }
+
+  .editor-container {
+    padding: 1.25rem 1.1rem 2rem;
+  }
+
+  .title-input {
+    font-size: 1.6rem;
+  }
+
+  .editor-toolbar {
+    padding: 0 0.5rem;
+  }
+}
 </style>
