@@ -57,7 +57,7 @@
           </div>
 
           <!-- 위험 구역 -->
-          <div class="danger-section" v-if="isEditMode">
+          <div class="danger-section" v-if="isEditMode && !isPersonalWorkspace">
             <div class="danger-card" v-if="workspaceStore.isOwner">
               <Trash2 class="danger-icon" />
               <div class="danger-content">
@@ -78,15 +78,17 @@
         </div>
       </TabPanel>
 
-      <!-- 멤버 탭 -->
-      <TabPanel header="멤버">
+      <!-- 멤버 탭 (개인 워크스페이스는 초대 불가라 숨김) -->
+      <TabPanel v-if="!isPersonalWorkspace" header="멤버">
         <div class="tab-content">
           <!-- 멤버 검색 -->
           <div class="search-section" v-if="!isEditMode || workspaceStore.isAdmin">
             <div class="search-wrapper">
               <Search class="search-icon" />
-              <InputText v-model="searchEmail" placeholder="이메일 또는 닉네임으로 검색" class="search-input" @input="handleSearchInput"
-                @focus="showSearchResults = true" />
+              <!-- 브라우저 주소 자동완성(저장된 이메일 목록)이 뜨지 않도록 검색 입력으로 지정 -->
+              <InputText v-model="searchEmail" type="search" name="member-query" autocomplete="off" role="combobox"
+                aria-autocomplete="list" placeholder="닉네임 또는 이메일 전체 주소로 검색" class="search-input"
+                @input="handleSearchInput" @focus="showSearchResults = true" />
               <Dropdown v-model="inviteRole" :options="availableRoles" optionLabel="label" optionValue="value"
                 class="role-select" />
             </div>
@@ -155,6 +157,13 @@
           </div>
         </div>
       </TabPanel>
+
+      <!-- 공개 탭 (기존 워크스페이스, ADMIN 이상) -->
+      <TabPanel v-if="isEditMode && workspaceStore.isAdmin" header="공개">
+        <div class="tab-content">
+          <PublishSettings v-if="activeTabIndex === publishTabIndex" />
+        </div>
+      </TabPanel>
     </TabView>
   </Dialog>
 
@@ -195,6 +204,7 @@ import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import TabView from 'primevue/tabview'
 import TabPanel from 'primevue/tabpanel'
+import PublishSettings from '@/components/publish/PublishSettings.vue'
 import Dropdown from 'primevue/dropdown'
 
 const toast = useToast()
@@ -223,6 +233,9 @@ const dialogVisible = computed({
 })
 
 const isEditMode = computed(() => props.mode === 'edit')
+const isPersonalWorkspace = computed(() => isEditMode.value && workspaceStore.currentWorkspace?.type === 'PERSONAL')
+// 공개 탭 위치: 일반(0), 멤버(1, 개인 워크스페이스는 없음), 공개
+const publishTabIndex = computed(() => (isPersonalWorkspace.value ? 1 : 2))
 const modalTitle = computed(() => isEditMode.value ? '워크스페이스 설정' : '새 워크스페이스')
 
 // 폼 데이터

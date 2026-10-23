@@ -1,5 +1,5 @@
 <template>
-  <Dialog v-model:visible="dialogVisible" header="공개 설정" :style="{ width: '560px' }" modal class="publish-modal">
+  <div class="publish-settings">
     <div class="publish-content" v-if="settings">
       <!-- 전체공개 토글 -->
       <div class="setting-row">
@@ -100,20 +100,16 @@
       <span>설정을 불러오는 중...</span>
     </div>
 
-    <template #footer>
-      <div class="modal-footer">
-        <Button label="취소" severity="secondary" outlined @click="dialogVisible = false" />
-        <Button label="저장" @click="save" :loading="isSaving" />
-      </div>
-    </template>
-  </Dialog>
+    <div v-if="settings" class="publish-footer">
+      <Button label="공개 설정 저장" @click="save" :loading="isSaving" class="save-btn" />
+    </div>
+  </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, reactive } from 'vue'
+import { ref, computed, watch, reactive, onMounted } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { Globe, FileText, EyeOff, Folder, Loader2 } from 'lucide-vue-next'
-import Dialog from 'primevue/dialog'
 import InputSwitch from 'primevue/inputswitch'
 import InputText from 'primevue/inputtext'
 import Checkbox from 'primevue/checkbox'
@@ -122,18 +118,13 @@ import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { publishApi } from '@/api/publishApi'
 import PublishFolderNode from '@/components/publish/PublishFolderNode.vue'
 
-const props = defineProps({
-  visible: { type: Boolean, default: false },
-})
-const emit = defineEmits(['update:visible'])
+/**
+ * 워크스페이스 공개 설정 (워크스페이스 설정 창의 '공개' 탭)
+ * 현재 워크스페이스 기준으로 불러오고 저장한다. 서버에서 ADMIN 이상만 허용.
+ */
 
 const toast = useToast()
 const workspaceStore = useWorkspaceStore()
-
-const dialogVisible = computed({
-  get: () => props.visible,
-  set: (val) => emit('update:visible', val),
-})
 
 const settings = ref(null)
 const publishAll = ref(false)
@@ -158,10 +149,14 @@ const flatFolders = computed(() => {
   return result
 })
 
-// 모달 열릴 때 데이터 로드
-watch(() => props.visible, async (val) => {
-  if (!val) return
+// 탭이 열릴 때, 워크스페이스가 바뀔 때 데이터 로드
+onMounted(load)
+watch(() => workspaceStore.currentWorkspaceId, load)
+
+async function load() {
   settings.value = null
+  for (const key of Object.keys(folderSettingsMap)) delete folderSettingsMap[key]
+  for (const key of Object.keys(excludedPostIdsMap)) delete excludedPostIdsMap[key]
 
   try {
     const response = await publishApi.getPublishSettings(workspaceStore.currentWorkspaceId)
@@ -182,10 +177,9 @@ watch(() => props.visible, async (val) => {
     // 폴더 설정 복원
     restoreFolderSettings(data.folders)
   } catch {
-    toast.add({ severity: 'error', summary: '설정 로드 실패', life: 3000 })
-    dialogVisible.value = false
+    toast.add({ severity: 'error', summary: '공개 설정을 불러오지 못했습니다.', life: 3000 })
   }
-})
+}
 
 function restoreFolderSettings(folders) {
   if (!folders) return
@@ -227,7 +221,6 @@ async function save() {
     publicUrl.value = response.data.publicUrl
 
     toast.add({ severity: 'success', summary: '공개 설정이 저장되었습니다.', life: 2000 })
-    dialogVisible.value = false
   } catch {
     toast.add({ severity: 'error', summary: '저장 실패', life: 3000 })
   } finally {
@@ -268,12 +261,8 @@ function openUrl() {
 </script>
 
 <style scoped>
-:deep(.publish-modal .p-dialog-content) {
-  padding: 0;
-}
-
 .publish-content {
-  padding: 1.5rem;
+  padding: 0.25rem 0 0;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -437,5 +426,11 @@ function openUrl() {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+.publish-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 1.25rem;
 }
 </style>

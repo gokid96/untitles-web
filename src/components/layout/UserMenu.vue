@@ -34,9 +34,9 @@
               <span class="workspace-name">{{ workspace.name }}</span>
               <span v-if="workspace.type === 'TEAM'" class="member-count">{{ workspace.memberCount }}/{{ workspace.memberLimit }}명</span>
             </div>
-            <!-- 개인 워크스페이스는 설정 버튼 숨김 -->
+            <!-- 현재 워크스페이스 설정 (개인 워크스페이스는 일반·공개 탭만) -->
             <button
-              v-if="workspace.workspaceId === workspaceStore.currentWorkspaceId && workspace.type === 'TEAM'"
+              v-if="workspace.workspaceId === workspaceStore.currentWorkspaceId"
               class="settings-btn"
               @click.stop="handleManageWorkspace(workspace)"
             >
@@ -58,10 +58,6 @@
         <div class="menu-divider"></div>
 
         <div class="menu-section">
-          <div class="menu-item" @click="handleOpenPublish">
-            <Globe class="menu-icon" />
-            <span>공개 설정</span>
-          </div>
           <div class="menu-item" @click="handleOpenProfile">
             <User class="menu-icon" />
             <span>내 정보</span>
@@ -86,7 +82,6 @@
 
     <!-- 모달 -->
     <ProfileModal v-model:visible="isProfileModalOpen" />
-    <PublishModal v-model:visible="isPublishModalOpen" />
     <WorkspaceModal
       v-model:visible="isWorkspaceModalOpen"
       :mode="workspaceModalMode"
@@ -101,7 +96,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
-import { ChevronUp, Users, User, Settings, Plus, Sun, Moon, LogOut, Globe } from 'lucide-vue-next'
+import { ChevronUp, Users, User, Settings, Plus, Sun, Moon, LogOut } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/authStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
@@ -109,7 +104,6 @@ import { useFolderStore } from '@/stores/folderStore'
 import { usePostStore } from '@/stores/postStore'
 import ProfileModal from '@/components/modals/ProfileModal.vue'
 import WorkspaceModal from '@/components/modals/WorkspaceModal.vue'
-import PublishModal from '@/components/modals/PublishModal.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -125,7 +119,6 @@ const isMenuOpen = ref(false)
 const isProfileModalOpen = ref(false)
 const isWorkspaceModalOpen = ref(false)
 const workspaceModalMode = ref('create')
-const isPublishModalOpen = ref(false)
 
 const userInitial = computed(() => {
   return currentUser.value?.nickname?.charAt(0).toUpperCase() || 'U'
@@ -145,11 +138,6 @@ function toggleMenu() {
 
 function closeMenu() {
   isMenuOpen.value = false
-}
-
-function handleOpenPublish() {
-  isPublishModalOpen.value = true
-  closeMenu()
 }
 
 function handleOpenProfile() {
@@ -187,11 +175,6 @@ function handleAddWorkspace() {
 }
 
 async function handleManageWorkspace(workspace) {
-  // 개인 워크스페이스는 설정 불가
-  if (workspace.type === 'PERSONAL') {
-    return
-  }
-
   if (workspace.workspaceId !== workspaceStore.currentWorkspaceId) {
     await handleSelectWorkspace(workspace.workspaceId)
   }
