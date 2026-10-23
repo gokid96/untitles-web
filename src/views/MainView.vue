@@ -68,6 +68,7 @@ import { useFolderStore } from '@/stores/folderStore'
 import { usePostStore } from '@/stores/postStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useAuthStore } from '@/stores/authStore'
+import { useUiStore } from '@/stores/uiStore'
 import { useAuthenticatedAction, useSidebarResize } from '@/composables'
 import { getErrorMessage } from '@/utils/helpers'
 
@@ -79,6 +80,7 @@ const ConfirmDialog = defineAsyncComponent(() =>
 const toast = useToast()
 const folderStore = useFolderStore()
 const postStore = usePostStore()
+const uiStore = useUiStore()
 const workspaceStore = useWorkspaceStore()
 const authStore = useAuthStore()
 
@@ -144,6 +146,13 @@ async function handleMoveFolder(folderId, targetFolderId) {
     { errorTitle: '폴더 이동 실패' }
   )
 }
+
+// 노트 링크·연결 패널에서 다른 노트 열기
+watch(() => uiStore.openPostRequest, (request) => {
+  if (request?.postId && request.postId !== postStore.currentPost?.id) {
+    handlePostSelected({ id: request.postId })
+  }
+})
 
 // 게시글 이벤트
 async function handlePostSelected(post) {

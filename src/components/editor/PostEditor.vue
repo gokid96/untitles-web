@@ -152,12 +152,15 @@ import { imageApi } from '@/api/imageApi'
 import UnsavedChangesModal from '@/components/common/UnsavedChangesModal.vue'
 import ConflictModal from '@/components/common/ConflictModal.vue'
 import LinkPopover from '@/components/editor/LinkPopover.vue'
+import { NoteLink } from '@/components/editor/noteLinkExtension'
+import { useGraphStore } from '@/stores/graphStore'
 
 const lowlight = createLowlight(common)
 const folderStore = useFolderStore()
 const postStore = usePostStore()
 const authStore = useAuthStore()
 const uiStore = useUiStore()
+const graphStore = useGraphStore()
 const toast = useToast()
 
 const GUEST_DRAFT_KEY = 'untitles_guest_draft'
@@ -247,6 +250,16 @@ const editor = useEditor({
     TableCell,
     TableHeader,
     Image.configure({ inline: false, allowBase64: false }),
+    NoteLink.configure({
+      // [[ 입력 시 후보: 로그인한 경우 현재 워크스페이스의 노트
+      getNotes: async () => {
+        if (!authStore.isAuthenticated) return []
+        await graphStore.load()
+        return graphStore.nodes
+      },
+      getCurrentPostId: () => props.post?.id ?? null,
+      onOpen: (postId) => uiStore.requestOpenPost(postId),
+    }),
   ],
   content: '',
   onUpdate: ({ editor }) => {
@@ -833,6 +846,28 @@ onBeforeUnmount(() => {
 
 :deep(.tiptap a:hover) {
   opacity: 0.8;
+}
+
+/* 노트 링크 ([[노트]]) */
+:deep(.tiptap a.note-link) {
+  display: inline-block;
+  padding: 0 0.35em;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--primary-color) 14%, transparent);
+  color: var(--primary-color);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+:deep(.tiptap a.note-link::before) {
+  content: '↗ ';
+  opacity: 0.7;
+  font-size: 0.85em;
+}
+
+:deep(.tiptap a.note-link:hover) {
+  background: color-mix(in srgb, var(--primary-color) 24%, transparent);
+  opacity: 1;
 }
 
 :deep(.tiptap blockquote) {

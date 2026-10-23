@@ -17,7 +17,7 @@
         </span>
       </div>
       <div class="post-divider"></div>
-      <div class="post-content tiptap-readonly" v-html="post.content"></div>
+      <div class="post-content tiptap-readonly" v-html="post.content" @click="handleContentClick"></div>
     </article>
   </div>
 
@@ -35,11 +35,23 @@
 
 <script setup>
 import { ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { User, Calendar, Clock, FileX, Loader2 } from 'lucide-vue-next'
 import { publishApi } from '@/api/publishApi'
 
 const route = useRoute()
+const router = useRouter()
+
+// 노트 링크를 누르면 같은 공개 워크스페이스의 해당 글로 이동 (비공개 글이면 찾을 수 없음 화면)
+function handleContentClick(event) {
+  const link = event.target.closest('a.note-link')
+  if (!link) return
+  event.preventDefault()
+  const postId = link.getAttribute('data-note-id')
+  if (postId) {
+    router.push({ name: 'public-post', params: { slug: route.params.slug, postId } })
+  }
+}
 
 const post = ref(null)
 const isLoading = ref(true)
@@ -259,5 +271,27 @@ watch(() => route.params.postId, loadPost, { immediate: true })
   height: 40px;
   opacity: 0.4;
   margin-bottom: 0.75rem;
+}
+
+/* 노트 링크 ([[노트]]) */
+:deep(.tiptap-readonly a.note-link) {
+  display: inline-block;
+  padding: 0 0.35em;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--primary-color) 14%, transparent);
+  color: var(--primary-color);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+:deep(.tiptap-readonly a.note-link::before) {
+  content: '↗ ';
+  opacity: 0.7;
+  font-size: 0.85em;
+}
+
+:deep(.tiptap-readonly a.note-link:hover) {
+  background: color-mix(in srgb, var(--primary-color) 24%, transparent);
+  opacity: 1;
 }
 </style>
