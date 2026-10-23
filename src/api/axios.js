@@ -15,6 +15,31 @@ const apiClient = axios.create({
 
 const AUTH_PAGES = ['/login', '/register', '/']
 
+// 토큰 재발급을 시도하지 않는 요청 (로그인·가입·재발급 자체)
+const NO_REFRESH_URLS = ['/auth/login', '/auth/signup', '/auth/refresh']
+
+// 동시에 여러 요청이 401을 받아도 재발급은 한 번만 하도록 진행 중인 요청을 공유
+let refreshPromise = null
+
+function refreshAccessToken() {
+  if (!refreshPromise) {
+    const refreshToken = localStorage.getItem('refreshToken')
+    refreshPromise = (refreshToken
+      ? axios.post(`${baseURL}/auth/refresh`, { refreshToken }, { timeout: 15000 })
+          .then((res) => {
+            const tokens = res.data?.data ?? res.data
+            localStorage.setItem('accessToken', tokens.accessToken)
+            localStorage.setItem('refreshToken', tokens.refreshToken)
+            return tokens.accessToken
+          })
+      : Promise.reject(new Error('리프레시 토큰 없음'))
+    ).finally(() => {
+      refreshPromise = null
+    })
+  }
+  return refreshPromise
+}
+
 // 요청 인터셉터 - 토큰 자동 주입
 apiClient.interceptors.request.use(
   (config) => {
@@ -35,7 +60,7 @@ apiClient.interceptors.response.use(
     }
     return response
   },
-  (error) => {
+  async (error) => {
     const appStore = useAppStore()
 
     if (!error.response) {
@@ -48,6 +73,25 @@ apiClient.interceptors.response.use(
 
     const { status } = error.response
     const currentPath = router.currentRoute.value.path
+
+    // 액세스 토큰 만료: 리프레시 토큰으로 재발급 후 원래 요청을 한 번 재시도
+    const original = error.config
+    if (
+      status === 401 &&
+      original &&
+      !original._retry &&
+      !NO_REFRESH_URLS.some((url) => original.url?.includes(url)) &&
+      localStorage.getItem('refreshToken')
+    ) {
+      original._retry = true
+      try {
+        const newAccessToken = await refreshAccessToken()
+        original.headers.Authorization = `Bearer ${newAccessToken}`
+        return apiClient(original)
+      } catch {
+        // 재발급 실패 시 아래의 세션 만료 처리로 진행
+      }
+    }
 
     switch (status) {
       case 401:
