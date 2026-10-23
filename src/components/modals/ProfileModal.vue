@@ -281,7 +281,7 @@ async function handleSave() {
 
     // profileImage가 변경된 경우에만 포함
     if (formData.profileImage !== currentUser.value?.profileImage) {
-      updateData.profileImage = formData.profileImage || null
+      updateData.profileImage = formData.profileImage || ''  // 빈 문자열이면 서버에서 이미지 제거
     }
 
     // 비밀번호 변경이 있는 경우
