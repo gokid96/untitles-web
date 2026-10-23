@@ -1,0 +1,11 @@
+{
+  "appId": "net.untitles.app",
+  "appName": "Untitles",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": false
+  },
+  "ios": {
+    "contentInset": "never"
+  }
+}

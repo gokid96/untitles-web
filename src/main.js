@@ -7,6 +7,7 @@ import ToastService from 'primevue/toastservice'
 
 import App from './App.vue'
 import router from './router'
+import { isNativeApp } from './utils/platform'
 
 // 블랙/화이트 모던 테마 프리셋 정의
 const ModernPreset = definePreset(Aura, {
@@ -56,3 +57,8 @@ app.use(PrimeVue, {
 app.use(ToastService)
 
 app.mount('#app')
+
+// 스토어 앱으로 실행 중일 때만 네이티브 초기화 (웹에서는 불러오지 않음)
+if (isNativeApp) {
+  import('./native').then(({ initNative }) => initNative(router))
+}

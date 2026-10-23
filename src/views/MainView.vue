@@ -178,6 +178,7 @@ async function handleMoveFolder(folderId, targetFolderId) {
 // 모바일(좁은 화면): 사이드바는 서랍, 그래프 패널은 전체 화면
 const isMobile = ref(false)
 let mobileQuery = null
+let unregisterBack = null
 
 function applyMobileLayout() {
   isMobile.value = mobileQuery.matches
@@ -326,6 +327,14 @@ onMounted(() => {
   mobileQuery = window.matchMedia('(max-width: 768px)')
   applyMobileLayout()
   mobileQuery.addEventListener('change', applyMobileLayout)
+  // 앱 뒤로가기: 열린 서랍부터 닫는다
+  unregisterBack = uiStore.registerBackHandler(() => {
+    if (isMobile.value && !isSidebarCollapsed.value) {
+      isSidebarCollapsed.value = true
+      return true
+    }
+    return false
+  })
 
   // 비로그인 상태면 바로 빈 에디터 표시
   if (!authStore.isAuthenticated) {
@@ -336,6 +345,7 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('keydown', handleGlobalKeydown)
   mobileQuery?.removeEventListener('change', applyMobileLayout)
+  unregisterBack?.()
 })
 </script>
 

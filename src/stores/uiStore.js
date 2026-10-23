@@ -51,12 +51,38 @@ export const useUiStore = defineStore('ui', () => {
     }
   }
 
-  // 오른쪽 연결 패널 (백링크 + 로컬 그래프)
+  // 오른쪽 그래프 패널 (백링크 + 로컬 그래프)
   const isLinkPanelOpen = ref(readFlag('linkPanelOpen'))
 
   function toggleLinkPanel() {
     isLinkPanelOpen.value = !isLinkPanelOpen.value
     writeFlag('linkPanelOpen', isLinkPanelOpen.value)
+  }
+
+  // 안드로이드 뒤로가기: 화면들이 등록한 처리기를 최근 것부터 실행 (처리했으면 true)
+  const backHandlers = []
+
+  function registerBackHandler(handler) {
+    backHandlers.push(handler)
+    return () => {
+      const i = backHandlers.indexOf(handler)
+      if (i >= 0) backHandlers.splice(i, 1)
+    }
+  }
+
+  function handleBack() {
+    if (authModalVisible.value) {
+      closeAuthModal()
+      return true
+    }
+    if (isLinkPanelOpen.value) {
+      toggleLinkPanel()
+      return true
+    }
+    for (let i = backHandlers.length - 1; i >= 0; i--) {
+      if (backHandlers[i]()) return true
+    }
+    return false
   }
 
   // 노트 링크·그래프에서 다른 노트 열기 요청 (MainView가 처리)
@@ -80,5 +106,7 @@ export const useUiStore = defineStore('ui', () => {
     toggleLinkPanel,
     openPostRequest,
     requestOpenPost,
+    registerBackHandler,
+    handleBack,
   }
 })
