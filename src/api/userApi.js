@@ -61,6 +61,11 @@ export const userApi = {
     return response
   },
 
+  // 회원 탈퇴
+  async deleteAccount() {
+    return apiClient.delete('/users/me')
+  },
+
   // 사용자 검색
   async searchUsers(query) {
     const response = await apiClient.get('/users/search', { params: { query } })

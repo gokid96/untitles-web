@@ -114,6 +114,12 @@ export const useAuthStore = defineStore('auth', () => {
     clearAuthData()
   }
 
+  // 회원 탈퇴 (성공하면 로그아웃 상태로 전환)
+  async function deleteAccount() {
+    await userApi.deleteAccount()
+    clearAuthData()
+  }
+
   // 사용자 정보 수정
   async function updateUserInfo(data) {
     const response = await userApi.updateUser(data)
@@ -140,6 +146,7 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     register,
     logout,
+    deleteAccount,
     updateUserInfo,
   }
 })

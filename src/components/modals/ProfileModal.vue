@@ -93,6 +93,23 @@
           :inputStyle="{ width: '100%' }"
         />
       </div>
+
+      <!-- 회원 탈퇴 -->
+      <div class="danger-zone">
+        <template v-if="!confirmingDelete">
+          <button type="button" class="danger-link" @click="confirmingDelete = true">회원 탈퇴</button>
+        </template>
+        <template v-else>
+          <p class="danger-text">
+            탈퇴하면 개인 워크스페이스의 모든 노트와 폴더가 삭제되며 되돌릴 수 없습니다.
+            다른 워크스페이스에 작성한 글은 "탈퇴한 사용자"로 남습니다.
+          </p>
+          <div class="danger-actions">
+            <Button label="취소" severity="secondary" text size="small" @click="confirmingDelete = false" />
+            <Button label="탈퇴하기" severity="danger" size="small" :loading="isDeleting" @click="handleDeleteAccount" />
+          </div>
+        </template>
+      </div>
     </div>
 
     <template #footer>
@@ -111,6 +128,7 @@ import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Button from 'primevue/button'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import { imageApi } from '@/api/imageApi'
 import { getErrorMessage } from '@/utils/helpers'
@@ -128,7 +146,10 @@ const toast = useToast()
 const authStore = useAuthStore()
 const { currentUser } = storeToRefs(authStore)
 
+const router = useRouter()
 const isSaving = ref(false)
+const isDeleting = ref(false)
+const confirmingDelete = ref(false)
 const isUploading = ref(false)
 const imageInput = ref(null)
 
@@ -156,6 +177,7 @@ watch(() => props.visible, (newVal) => {
     formData.newPassword = ''
     formData.confirmPassword = ''
     formData.profileImage = currentUser.value?.profileImage || ''
+    confirmingDelete.value = false
     document.addEventListener('keydown', handleKeydown)
   } else {
     document.removeEventListener('keydown', handleKeydown)
@@ -182,6 +204,21 @@ function handleVisibleChange(value) {
 
 function handleCancel() {
   emit('update:visible', false)
+}
+
+async function handleDeleteAccount() {
+  isDeleting.value = true
+  try {
+    await authStore.deleteAccount()
+    emit('update:visible', false)
+    toast.add({ severity: 'success', summary: '탈퇴 완료', detail: '회원 탈퇴가 완료되었습니다.', life: 3000 })
+    router.push('/')
+  } catch (error) {
+    toast.add({ severity: 'error', summary: '탈퇴 실패', detail: getErrorMessage(error), life: 5000 })
+  } finally {
+    isDeleting.value = false
+    confirmingDelete.value = false
+  }
 }
 
 function triggerImageUpload() {
@@ -422,5 +459,38 @@ async function handleSave() {
 .hint {
   font-size: 0.75rem;
   color: var(--text-color-secondary);
+}
+
+.danger-zone {
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+}
+
+.danger-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.8125rem;
+  color: var(--text-color-secondary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.danger-link:hover {
+  color: #ef4444;
+}
+
+.danger-text {
+  margin: 0 0 0.75rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: #ef4444;
+}
+
+.danger-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }
 </style>
