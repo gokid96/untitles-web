@@ -109,6 +109,10 @@
               네이버로 계속하기
             </button>
           </div>
+
+          <p class="legal-links">
+            <router-link to="/privacy" @click="$emit('close')">개인정보처리방침</router-link>
+          </p>
         </div>
       </div>
     </Transition>
@@ -386,6 +390,9 @@ async function handleRegister() {
 .divider span { padding: 0 1rem; font-size: 0.8rem; color: var(--text-color-secondary); }
 
 .social-login { display: flex; flex-direction: column; gap: 0.625rem; }
+
+.legal-links { margin-top: 1.25rem; text-align: center; font-size: 0.75rem; }
+.legal-links a { color: var(--text-color-secondary); text-decoration: underline; }
 
 .social-btn {
   display: flex;

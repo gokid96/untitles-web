@@ -128,6 +128,9 @@
         <span>이미 계정이 있으신가요?</span>
         <router-link to="/login" class="login-link">로그인</router-link>
       </div>
+      <p class="legal-links">
+        가입하면 <router-link to="/privacy">개인정보처리방침</router-link>에 동의하는 것으로 봅니다.
+      </p>
     </div>
   </div>
 </template>
@@ -503,6 +506,18 @@ async function handleRegister() {
 }
 
 /* 로그인 링크 */
+.legal-links {
+  margin-top: 1rem;
+  text-align: center;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.legal-links a {
+  color: rgba(255, 255, 255, 0.6);
+  text-decoration: underline;
+}
+
 .login-section {
   text-align: center;
   margin-top: 1.5rem;
