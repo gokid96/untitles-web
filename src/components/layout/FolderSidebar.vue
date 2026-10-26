@@ -105,7 +105,12 @@
         <span class="stat-item" :title="`노트 ${currentWorkspace?.postCount || 0}/${currentWorkspace?.postLimit || 50}`">
           <FileText class="stat-icon" /> {{ currentWorkspace?.postCount || 0 }}/{{ currentWorkspace?.postLimit || 50 }}
         </span>
+        <button class="stat-item trash-button" title="휴지통" @click="isTrashOpen = true">
+          <Trash2 class="stat-icon" /> 휴지통
+        </button>
       </div>
+
+      <TrashModal v-model:visible="isTrashOpen" />
 
       <!-- 하단 사용자 메뉴 -->
       <UserMenu />
@@ -117,9 +122,10 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
-import { Search, X, FilePlus, FolderPlus, ChevronsUp, ChevronsDown, ArrowUpDown, Waypoints, FolderOpen, FolderPlus as Folder, FileText, LogIn } from 'lucide-vue-next'
+import { Search, X, FilePlus, FolderPlus, ChevronsUp, ChevronsDown, ArrowUpDown, Waypoints, FolderOpen, FolderPlus as Folder, FileText, LogIn, Trash2 } from 'lucide-vue-next'
 import TreeNode from './TreeNode.vue'
 import UserMenu from './UserMenu.vue'
+import TrashModal from '@/components/modals/TrashModal.vue'
 import SidebarSkeleton from '@/components/common/SidebarSkeleton.vue'
 import ContextMenu from 'primevue/contextmenu'
 import Menu from 'primevue/menu'
@@ -129,6 +135,8 @@ import { useAuthStore } from '@/stores/authStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useUiStore } from '@/stores/uiStore'
 import { debounce } from '@/utils/helpers'
+
+const isTrashOpen = ref(false)
 
 const folderStore = useFolderStore()
 const postStore = usePostStore()
@@ -687,6 +695,19 @@ function handleRootDrop(event) {
 .stat-icon {
   width: 14px;
   height: 14px;
+}
+
+.trash-button {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.trash-button:hover {
+  color: var(--text-color);
 }
 
 /* 비로그인 사이드바 */

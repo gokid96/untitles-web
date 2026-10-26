@@ -164,7 +164,7 @@ async function handleCreateFolder(parentId) {
 function handleDeleteFolder(folder) {
   deleteTarget.value = folder
   deleteType.value = 'folder'
-  confirmDialogMessage.value = '폴더를 삭제하시겠습니까?\n하위 폴더와 게시글도 함께 삭제됩니다.'
+  confirmDialogMessage.value = '폴더를 휴지통으로 옮길까요?\n하위 폴더와 노트도 함께 옮겨지며, 30일 안에 복구할 수 있습니다.'
   isConfirmDialogOpen.value = true
 }
 
@@ -263,7 +263,7 @@ function handleCancelEdit() {
 function handleDeletePost(post) {
   deleteTarget.value = post
   deleteType.value = 'post'
-  confirmDialogMessage.value = '노트를 삭제하시겠습니까?'
+  confirmDialogMessage.value = '노트를 휴지통으로 옮길까요?\n30일 안에 휴지통에서 복구할 수 있습니다.'
   isConfirmDialogOpen.value = true
 }
 
