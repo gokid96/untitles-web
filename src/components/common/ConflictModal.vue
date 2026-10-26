@@ -16,14 +16,19 @@
         <AlertTriangle class="icon" />
       </div>
 
-      <p>다른 곳에서 이 문서를 수정했습니다.</p>
+      <p class="conflict-title">다른 곳에서 같은 부분을 수정했어요</p>
+      <p>자동으로 합칠 수 없어서 선택이 필요해요.</p>
 
       <div class="conflict-actions">
-        <button class="btn-secondary" @click="handleLoadLatest">
-          최신 버전 불러오기
+        <button class="btn-primary" @click="handleKeepBoth">
+          둘 다 보존
+          <span class="btn-hint">내 내용은 사본 노트로 저장</span>
         </button>
-        <button class="btn-primary" @click="handleKeepMine">
-          내 변경사항 저장
+        <button class="btn-secondary" @click="handleKeepMine">
+          내 내용으로 덮어쓰기
+        </button>
+        <button class="btn-secondary" @click="handleLoadLatest">
+          다른 곳의 내용 불러오기
         </button>
       </div>
     </div>
@@ -41,10 +46,15 @@ defineProps({
   }
 })
 
-const emit = defineEmits(['update:visible', 'keep-mine', 'load-latest'])
+const emit = defineEmits(['update:visible', 'keep-mine', 'load-latest', 'keep-both'])
 
 function handleKeepMine() {
   emit('keep-mine')
+  emit('update:visible', false)
+}
+
+function handleKeepBoth() {
+  emit('keep-both')
   emit('update:visible', false)
 }
 
@@ -70,19 +80,34 @@ function handleLoadLatest() {
   color: #f59e0b;
 }
 
+.conflict-modal .conflict-title {
+  margin: 0 0 0.375rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
 .conflict-modal p {
-  margin: 0 0 1.5rem;
+  margin: 0 0 1.25rem;
   font-size: 0.875rem;
   color: var(--text-color-secondary);
 }
 
 .conflict-actions {
   display: flex;
-  gap: 0.75rem;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.btn-hint {
+  display: block;
+  margin-top: 0.125rem;
+  font-size: 0.75rem;
+  font-weight: 400;
+  opacity: 0.85;
 }
 
 .conflict-actions button {
-  flex: 1;
   padding: 0.625rem 1rem;
   border-radius: 8px;
   font-size: 0.875rem;

@@ -41,6 +41,7 @@
     "force-graph": "^1.52.0",
     "lowlight": "^3.3.0",
     "lucide-vue-next": "^0.563.0",
+    "node-diff3": "3.2.1",
     "pinia": "^3.0.3",
     "primeicons": "^7.0.0",
     "primevue": "^4.4.1",

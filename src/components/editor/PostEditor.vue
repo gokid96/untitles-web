@@ -103,6 +103,7 @@
       v-model:visible="showConflictModal"
       @keep-mine="handleKeepMine"
       @load-latest="handleLoadLatest"
+      @keep-both="handleKeepBoth"
     />
 
     <!-- 링크 팝오버 -->
@@ -154,6 +155,9 @@ import ConflictModal from '@/components/common/ConflictModal.vue'
 import LinkPopover from '@/components/editor/LinkPopover.vue'
 import { NoteLink } from '@/components/editor/noteLinkExtension'
 import { useGraphStore } from '@/stores/graphStore'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { postApi } from '@/api/postApi'
+import { createNormalizer, mergeContent, mergeTitle } from '@/utils/noteMerge'
 
 const lowlight = createLowlight(common)
 const folderStore = useFolderStore()
@@ -162,6 +166,7 @@ const authStore = useAuthStore()
 const uiStore = useUiStore()
 const graphStore = useGraphStore()
 const toast = useToast()
+const workspaceStore = useWorkspaceStore()
 
 const GUEST_DRAFT_KEY = 'untitles_guest_draft'
 const GUEST_MODAL_THRESHOLD = 50 // 50자 이상 입력하면 모달 표시
@@ -183,6 +188,8 @@ const hasPendingSave = ref(false)
 
 // 충돌 시 최신 데이터 임시 저장
 const conflictLatestData = ref(null)
+// 충돌 해결(사본 만들기 등) 중에는 자동 저장·원격 확인을 멈춘다
+const isResolvingConflict = ref(false)
 
 // 링크 팝오버 상태
 const showLinkPopover = ref(false)
@@ -231,8 +238,9 @@ const charCount = computed(() => {
   return editor.value.getText().replace(/\s/g, '').length
 })
 
-const editor = useEditor({
-  extensions: [
+// 편집기 확장 목록 (자동 병합용 정규화에도 같은 구성을 쓴다)
+function buildEditorExtensions() {
+  return [
     StarterKit.configure({ codeBlock: false }),
     Placeholder.configure({ placeholder: '내용을 입력하세요...' }),
     CodeBlockLowlight.configure({ lowlight }),
@@ -260,7 +268,11 @@ const editor = useEditor({
       getCurrentPostId: () => props.post?.id ?? null,
       onOpen: (postId) => uiStore.requestOpenPost(postId),
     }),
-  ],
+  ]
+}
+
+const editor = useEditor({
+  extensions: buildEditorExtensions(),
   content: '',
   onUpdate: ({ editor }) => {
     formData.value.content = editor.getHTML()
@@ -417,21 +429,22 @@ async function performSave(forceVersion = null) {
     version: versionToUse
   }
 
+  // 저장 요청을 보낸 시점의 내용 (응답을 기다리는 동안 더 입력한 내용은 다음 저장에서 보낸다)
+  const sent = { title: formData.value.title, content: formData.value.content }
+  const postId = props.post.id
+
   try {
-    const result = await postStore.updatePost(props.post.id, saveData)
+    const result = await postStore.updatePost(postId, saveData)
+    if (props.post?.id !== postId) return  // 그 사이 다른 노트로 이동
 
     if (result.conflict) {
-      // 충돌 발생 - 모달 표시
-      conflictLatestData.value = result.post
-      showConflictModal.value = true
+      // 다른 곳에서 먼저 저장함 - 서로 다른 부분이면 자동으로 합치고, 같은 부분이면 선택 창
+      absorbRemoteChange(result.post)
     } else {
       // 저장 성공
       currentVersion.value = result.post.version
-      originalData.value = {
-        title: formData.value.title,
-        content: formData.value.content
-      }
-      clearUnsavedBackup(props.post.id)
+      originalData.value = sent
+      clearUnsavedBackup(postId)
     }
   } catch (error) {
     // 저장 실패 시 작성 내용을 기기에 보관해 두고, 다음에 이 노트를 열 때 복구한다
@@ -495,23 +508,174 @@ function restoreUnsavedBackup() {
   triggerAutoSave()
 }
 
-// 충돌 처리: 내 변경사항 유지 (락 획득)
-async function handleKeepMine() {
-  if (!conflictLatestData.value) return
+// ===== 다른 기기·탭의 수정 반영 =====
+const normalizeHtml = createNormalizer(buildEditorExtensions)
 
-  // 최신 version으로 내 내용 저장
-  isSaving.value = true
+// 내용을 바꿔도 커서가 멀리 튀지 않게 이전 위치 근처로 되돌린다
+function setContentKeepingSelection(html) {
+  const ed = editor.value
+  const { from, to } = ed.state.selection
+  ed.commands.setContent(html, { emitUpdate: false })
+  const max = ed.state.doc.content.size
   try {
-    await performSave(conflictLatestData.value.version)
+    ed.commands.setTextSelection({ from: Math.min(from, max), to: Math.min(to, max) })
+  } catch {
+    // 위치를 못 찾으면 그대로 둔다
+  }
+  formData.value.content = ed.getHTML()
+}
+
+/**
+ * 서버에 더 새로운 버전이 있을 때 호출.
+ * 마지막으로 맞춘 내용(originalData)을 기준으로 내 수정과 상대 수정을 블록 단위로 합친다.
+ * 같은 부분을 둘 다 고쳤으면 선택 창을 띄운다.
+ * @returns {boolean} 자동으로 반영했으면 true
+ */
+function absorbRemoteChange(latest) {
+  if (!latest || !editor.value) return false
+
+  const base = originalData.value
+  const mineContent = formData.value.content
+  const theirsContent = normalizeHtml(latest.content || '')
+  const content = mergeContent(normalizeHtml(base.content), normalizeHtml(mineContent), theirsContent)
+  const title = mergeTitle(base.title, formData.value.title, latest.title || '')
+
+  if (!content.ok || !title.ok) {
+    conflictLatestData.value = latest
+    showConflictModal.value = true
+    return false
+  }
+
+  const hadLocalChanges = hasUnsavedChanges.value
+  isInitializing.value = true
+  if (content.html !== normalizeHtml(mineContent)) {
+    setContentKeepingSelection(content.html)
+  }
+  formData.value.title = title.value
+  originalData.value = { title: latest.title || '', content: theirsContent }
+  currentVersion.value = latest.version
+
+  setTimeout(() => {
+    isInitializing.value = false
+    // 합친 결과에 내 수정이 들어 있으면 다시 저장. 표기만 다른 경우는 저장하지 않는다
+    // (안 그러면 두 기기가 서로의 저장을 계속 다시 저장할 수 있다)
+    if (normalizeHtml(formData.value.content) === originalData.value.content) {
+      originalData.value = { ...originalData.value, content: formData.value.content }
+    }
+    if (hasUnsavedChanges.value) triggerAutoSave()
+  }, 100)
+
+  if (hadLocalChanges) {
+    toast.add({
+      severity: 'info',
+      summary: '자동으로 합쳤어요',
+      detail: '다른 곳에서 수정한 내용과 내 수정 내용을 함께 반영했습니다.',
+      life: 3000,
+    })
+  }
+  return true
+}
+
+/**
+ * 탭·앱으로 돌아왔을 때나 주기적으로 서버 버전을 확인해, 저장 전에 미리 최신 내용을 반영한다.
+ * (오래 열어 둔 화면에서 수정하다가 충돌하는 경우를 줄인다)
+ */
+let checkingRemote = false
+async function checkForRemoteChanges() {
+  const postId = props.post?.id
+  const workspaceId = workspaceStore.currentWorkspaceId
+  if (!postId || !workspaceId || !authStore.isAuthenticated || checkingRemote) return
+  if (isInitializing.value || showConflictModal.value || isSavingInProgress.value || isResolvingConflict.value) return
+  if (document.visibilityState !== 'visible') return
+
+  checkingRemote = true
+  try {
+    const { data: latest } = await postApi.getPost(workspaceId, postId)
+    // 확인하는 동안 다른 노트로 이동했거나 저장이 시작됐으면 무시 (저장 쪽에서 처리)
+    if (props.post?.id !== postId || isSavingInProgress.value || showConflictModal.value) return
+    if (latest.version == null || currentVersion.value == null || latest.version <= currentVersion.value) return
+    absorbRemoteChange(latest)
+  } catch {
+    // 네트워크 오류 등은 다음 확인 때 다시 시도
+  } finally {
+    checkingRemote = false
+  }
+}
+
+const REMOTE_CHECK_INTERVAL = 30_000
+let remoteCheckTimer = null
+
+function handleVisibilityChange() {
+  if (document.visibilityState === 'visible') checkForRemoteChanges()
+}
+
+// 충돌 처리: 둘 다 보존 - 내 내용은 사본 노트로 저장하고, 이 노트는 최신 내용으로
+async function handleKeepBoth() {
+  const latest = conflictLatestData.value
+  const workspaceId = workspaceStore.currentWorkspaceId
+  if (!latest || !workspaceId) return
+
+  isResolvingConflict.value = true
+  const baseTitle = formData.value.title.trim() || '무제'
+  const copyTitle = `${baseTitle} (내 수정본)`.slice(0, 200)
+  try {
+    const { data: copy } = await postApi.createPost(workspaceId, {
+      title: copyTitle,
+      content: formData.value.content,
+      folderId: formData.value.folderId,
+    })
+    folderStore.addPostLocally({
+      id: copy.id,
+      title: copy.title,
+      folderId: copy.folderId,
+      createdAt: copy.createdAt,
+      updatedAt: copy.updatedAt,
+    })
+    workspaceStore.updatePostCount(1)
+    handleLoadLatest()
     toast.add({
       severity: 'success',
-      summary: '저장 완료',
-      detail: '내 변경사항이 저장되었습니다.',
-      life: 2000,
+      summary: '둘 다 보존했어요',
+      detail: `내 수정 내용은 '${copyTitle}' 노트로 저장했습니다.`,
+      life: 4000,
+    })
+  } catch (error) {
+    // 사본을 못 만들면 아무것도 잃지 않도록 선택 창을 다시 띄운다
+    conflictLatestData.value = latest
+    showConflictModal.value = true
+    toast.add({
+      severity: 'error',
+      summary: '사본 저장 실패',
+      detail: error.response?.data?.message || '사본 노트를 만들지 못했습니다. 다른 방법을 선택해주세요.',
+      life: 4000,
     })
   } finally {
+    isResolvingConflict.value = false
+  }
+}
+
+// 충돌 처리: 내 변경사항 유지 (락 획득)
+async function handleKeepMine() {
+  const latest = conflictLatestData.value
+  if (!latest) return
+  conflictLatestData.value = null
+
+  // 최신 version을 기준으로 내 내용을 덮어써 저장 (그 사이 또 바뀌었으면 다시 병합·선택)
+  isResolvingConflict.value = true
+  isSaving.value = true
+  try {
+    await performSave(latest.version)
+    if (!showConflictModal.value && !hasUnsavedChanges.value) {
+      toast.add({
+        severity: 'success',
+        summary: '저장 완료',
+        detail: '내 변경사항이 저장되었습니다.',
+        life: 2000,
+      })
+    }
+  } finally {
     isSaving.value = false
-    conflictLatestData.value = null
+    isResolvingConflict.value = false
   }
 }
 
@@ -519,9 +683,9 @@ async function handleKeepMine() {
 function handleLoadLatest() {
   if (!conflictLatestData.value) return
 
-  // 에디터 내용을 서버 데이터로 교체
-  // 단, currentVersion은 업데이트하지 않음 → 다시 수정하면 또 충돌
+  // 에디터 내용을 서버 데이터로 교체하고, 이후 수정은 이 버전을 기준으로 저장
   isInitializing.value = true
+  currentVersion.value = conflictLatestData.value.version
 
   formData.value = {
     title: conflictLatestData.value.title || '',
@@ -547,8 +711,8 @@ function handleLoadLatest() {
 const autoSave = debounce(async () => {
   if (!props.post?.id || isInitializing.value) return
 
-  // 충돌 모달이 열려있으면 저장하지 않음
-  if (showConflictModal.value) return
+  // 충돌 모달이 열려있거나 충돌을 정리하는 중이면 저장하지 않음
+  if (showConflictModal.value || isResolvingConflict.value) return
 
   // 이미 저장 중이면 대기 예약
   if (isSavingInProgress.value) {
@@ -721,11 +885,18 @@ watch(
 
 onMounted(() => {
   window.addEventListener('beforeunload', handleBeforeUnload)
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+  window.addEventListener('focus', checkForRemoteChanges)
+  remoteCheckTimer = setInterval(checkForRemoteChanges, REMOTE_CHECK_INTERVAL)
 })
 
 onBeforeUnmount(() => {
   autoSave.cancel()
   window.removeEventListener('beforeunload', handleBeforeUnload)
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
+  window.removeEventListener('focus', checkForRemoteChanges)
+  clearInterval(remoteCheckTimer)
+  normalizeHtml.destroy()
   editor.value?.destroy()
 })
 </script>
