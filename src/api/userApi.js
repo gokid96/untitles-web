@@ -43,8 +43,9 @@ export const userApi = {
   },
 
   // 로그아웃
-  async logout() {
-    return apiClient.post('/auth/logout')
+  // 이 기기의 리프레시 토큰을 서버에서도 무효화
+  async logout(refreshToken) {
+    return apiClient.post('/auth/logout', { refreshToken })
   },
 
   // 사용자 정보 조회

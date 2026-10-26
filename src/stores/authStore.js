@@ -107,7 +107,7 @@ export const useAuthStore = defineStore('auth', () => {
   // 로그아웃
   async function logout() {
     try {
-      await userApi.logout()
+      await userApi.logout(localStorage.getItem('refreshToken'))
     } catch (error) {
       console.error('Logout request failed:', error)
     }

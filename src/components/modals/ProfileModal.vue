@@ -329,14 +329,27 @@ async function handleSave() {
 
     await authStore.updateUserInfo(updateData)
 
+    emit('update:visible', false)
+
+    // 비밀번호를 바꾸면 서버가 모든 기기의 로그인을 끊으므로 다시 로그인하게 한다
+    if (updateData.newPassword) {
+      toast.add({
+        severity: 'success',
+        summary: '비밀번호 변경 완료',
+        detail: '보안을 위해 모든 기기에서 로그아웃되었습니다. 새 비밀번호로 다시 로그인해주세요.',
+        life: 5000,
+      })
+      await authStore.logout()
+      router.push('/login')
+      return
+    }
+
     toast.add({
       severity: 'success',
       summary: '저장 완료',
       detail: '내 정보가 수정되었습니다.',
       life: 3000,
     })
-
-    emit('update:visible', false)
   } catch (error) {
     console.error('Profile update error:', error)
     toast.add({
