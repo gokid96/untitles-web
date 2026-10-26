@@ -248,7 +248,7 @@ async function handleImageUpload(event) {
     formData.profileImage = response.data.url
   } catch (error) {
     console.error('Image upload failed:', error)
-    toast.add({ severity: 'error', summary: '업로드 실패', detail: '이미지 업로드에 실패했습니다.', life: 3000 })
+    toast.add({ severity: 'error', summary: '업로드 실패', detail: getErrorMessage(error), life: 4000 })
   } finally {
     isUploading.value = false
     event.target.value = ''

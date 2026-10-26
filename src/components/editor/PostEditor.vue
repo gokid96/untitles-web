@@ -341,7 +341,12 @@ async function handleImageUpload(event) {
     toast.add({ severity: 'success', summary: '완료', detail: '이미지가 업로드되었습니다.', life: 2000 })
   } catch (error) {
     console.error('Image upload failed:', error)
-    toast.add({ severity: 'error', summary: '업로드 실패', detail: '이미지 업로드에 실패했습니다.', life: 3000 })
+    toast.add({
+      severity: 'error',
+      summary: '업로드 실패',
+      detail: error.response?.data?.message || '이미지 업로드에 실패했습니다.',
+      life: 4000,
+    })
   } finally {
     event.target.value = '' // input 초기화
   }
