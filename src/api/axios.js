@@ -21,6 +21,21 @@ const NO_REFRESH_URLS = ['/auth/login', '/auth/signup', '/auth/refresh']
 // 동시에 여러 요청이 401을 받아도 재발급은 한 번만 하도록 진행 중인 요청을 공유
 let refreshPromise = null
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+// 다른 탭이 같은 리프레시 토큰으로 먼저 재발급하면 이 탭의 요청은 실패한다(쓴 토큰은 폐기되므로).
+// 그 탭이 새 토큰을 저장할 때까지 잠깐 기다렸다가, 바뀌었으면 그 토큰을 쓴다.
+async function tokenRotatedByOtherTab(usedRefreshToken) {
+  for (let i = 0; i < 10; i++) {
+    const current = localStorage.getItem('refreshToken')
+    if (current && current !== usedRefreshToken) {
+      return localStorage.getItem('accessToken')
+    }
+    await sleep(200)
+  }
+  return null
+}
+
 function refreshAccessToken() {
   if (!refreshPromise) {
     const refreshToken = localStorage.getItem('refreshToken')
@@ -31,6 +46,13 @@ function refreshAccessToken() {
             localStorage.setItem('accessToken', tokens.accessToken)
             localStorage.setItem('refreshToken', tokens.refreshToken)
             return tokens.accessToken
+          })
+          .catch(async (err) => {
+            if (err.response?.status === 401 || err.response?.status === 400) {
+              const accessToken = await tokenRotatedByOtherTab(refreshToken)
+              if (accessToken) return accessToken
+            }
+            throw err
           })
       : Promise.reject(new Error('리프레시 토큰 없음'))
     ).finally(() => {
