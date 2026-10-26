@@ -28,16 +28,17 @@
         <span class="avatar-hint">클릭하여 이미지 변경</span>
       </div>
 
-      <!-- 이메일 (읽기 전용) -->
+      <!-- 이메일 (비밀번호 찾기용) -->
       <div class="field">
         <label for="email">이메일</label>
         <InputText
           id="email"
-          :value="currentUser?.email || ''"
-          placeholder="이메일"
+          v-model="formData.email"
+          type="email"
+          placeholder="비밀번호를 잊었을 때 찾는 데 사용합니다"
           class="w-full"
-          disabled
         />
+        <small class="hint">등록해 두면 비밀번호를 잊었을 때 이메일로 재설정할 수 있어요</small>
       </div>
 
       <!-- 닉네임 -->
@@ -159,6 +160,7 @@ const formData = reactive({
   newPassword: '',
   confirmPassword: '',
   profileImage: '',
+  email: '',
 })
 
 const userInitial = computed(() => {
@@ -173,6 +175,7 @@ const profileImageUrl = computed(() => {
 watch(() => props.visible, (newVal) => {
   if (newVal) {
     formData.nickname = currentUser.value?.nickname || ''
+    formData.email = currentUser.value?.email || ''
     formData.currentPassword = ''
     formData.newPassword = ''
     formData.confirmPassword = ''
@@ -314,6 +317,11 @@ async function handleSave() {
   try {
     const updateData = {
       nickname: formData.nickname,
+    }
+
+    // 이메일이 바뀐 경우에만 포함 (빈 값이면 서버에서 삭제)
+    if (formData.email.trim() !== (currentUser.value?.email || '')) {
+      updateData.email = formData.email.trim()
     }
 
     // profileImage가 변경된 경우에만 포함

@@ -36,6 +36,15 @@ export const userApi = {
   },
 
   // 로그인
+  // 비밀번호 재설정: 이메일로 인증번호 요청 → 인증번호와 새 비밀번호로 변경
+  async requestPasswordReset(email) {
+    return apiClient.post('/auth/password-reset/request', { email })
+  },
+
+  async confirmPasswordReset(email, code, newPassword) {
+    return apiClient.post('/auth/password-reset/confirm', { email, code, newPassword })
+  },
+
   async login(loginId, password) {
     const response = await apiClient.post('/auth/login', { loginId, password })
     response.data = transformLoginResponse(response.data)

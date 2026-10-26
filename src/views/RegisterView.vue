@@ -66,6 +66,17 @@
           </div>
         </div>
 
+        <!-- 인증 없이 받는 선택 이메일: 비밀번호 찾기에 사용 -->
+        <div class="form-group" v-if="!emailVerificationRequired">
+          <label for="optionalEmail">이메일 <span class="optional">(선택)</span></label>
+          <InputText
+            id="optionalEmail"
+            v-model="formData.email"
+            type="email"
+            placeholder="비밀번호를 잊었을 때 찾는 데 사용합니다"
+          />
+        </div>
+
         <div class="form-group">
           <label for="loginId">아이디</label>
           <InputText 
@@ -295,7 +306,7 @@ async function handleRegister() {
   isLoading.value = true
 
   try {
-    await authStore.register(emailVerificationRequired ? formData : { ...formData, email: undefined })
+    await authStore.register({ ...formData, email: formData.email.trim() || undefined })
     router.push('/app')
   } catch (error) {
     toast.add({
@@ -542,5 +553,9 @@ async function handleRegister() {
   .register-form {
     padding: 1.5rem;
   }
+}
+.optional {
+  font-weight: 400;
+  color: var(--text-color-secondary);
 }
 </style>

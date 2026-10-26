@@ -32,6 +32,7 @@
             <button type="submit" class="submit-btn" :disabled="isLoading">
               {{ isLoading ? '로그인 중...' : '로그인' }}
             </button>
+            <button type="button" class="forgot-link" @click="isForgotOpen = true">비밀번호를 잊으셨나요?</button>
           </form>
 
           <form v-else @submit.prevent="handleRegister" class="auth-form">
@@ -58,6 +59,11 @@
             </div>
             <div class="form-group" v-if="emailVerificationRequired && emailVerified">
               <div class="verified-badge">✓ 이메일 인증 완료</div>
+            </div>
+            <!-- 인증 없이 받는 선택 이메일: 비밀번호 찾기에 사용 -->
+            <div class="form-group" v-if="!emailVerificationRequired">
+              <label>이메일 <span class="optional">(선택)</span></label>
+              <input v-model="registerForm.email" type="email" placeholder="비밀번호를 잊었을 때 찾는 데 사용합니다" />
             </div>
             <div class="form-group">
               <label>아이디</label>
@@ -110,6 +116,8 @@
             </button>
           </div>
 
+          <ForgotPasswordModal v-model:visible="isForgotOpen" />
+
           <p class="legal-links">
             <router-link to="/privacy" @click="$emit('close')">개인정보처리방침</router-link>
           </p>
@@ -121,6 +129,7 @@
 <script setup>
 import { socialLoginEnabled } from '@/utils/platform'
 import { ref, reactive, watch } from 'vue'
+import ForgotPasswordModal from '@/components/modals/ForgotPasswordModal.vue'
 import { useAuthStore } from '@/stores/authStore'
 import { usePostStore } from '@/stores/postStore'
 import { useToast } from 'primevue/usetoast'
@@ -139,6 +148,7 @@ const postStore = usePostStore()
 const toast = useToast()
 
 const mode = ref(props.initialMode)
+const isForgotOpen = ref(false)
 const isLoading = ref(false)
 
 watch(() => props.initialMode, (val) => { mode.value = val })
@@ -247,7 +257,7 @@ async function handleRegister() {
     await authStore.register({
       loginId: registerForm.loginId,
       nickname: registerForm.nickname,
-      ...(emailVerificationRequired && { email: registerForm.email }),
+      ...(registerForm.email.trim() && { email: registerForm.email.trim() }),
       password: registerForm.password,
     })
     await restoreGuestDraft(postStore)
@@ -392,6 +402,16 @@ async function handleRegister() {
 .social-login { display: flex; flex-direction: column; gap: 0.625rem; }
 
 .legal-links { margin-top: 1.25rem; text-align: center; font-size: 0.75rem; }
+.forgot-link {
+  align-self: center;
+  border: none;
+  background: none;
+  color: var(--text-color-secondary);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.optional { font-weight: 400; color: var(--text-color-secondary); }
 .legal-links a { color: var(--text-color-secondary); text-decoration: underline; }
 
 .social-btn {

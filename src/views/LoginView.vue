@@ -86,6 +86,11 @@
         </button>
       </div>
 
+      <div class="forgot-section">
+        <button type="button" class="forgot-link" @click="isForgotOpen = true">비밀번호를 잊으셨나요?</button>
+      </div>
+      <ForgotPasswordModal v-model:visible="isForgotOpen" />
+
       <!-- 회원가입 링크 -->
       <div class="register-section">
         <span>계정이 없으신가요?</span>
@@ -97,6 +102,9 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import ForgotPasswordModal from '@/components/modals/ForgotPasswordModal.vue'
+
+const isForgotOpen = ref(false)
 import { socialLoginEnabled } from '@/utils/platform'
 import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
@@ -462,5 +470,18 @@ async function handleLogin() {
   .logo-text {
     font-size: 1.5rem;
   }
+}
+.forgot-section {
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.forgot-link {
+  border: none;
+  background: none;
+  color: var(--text-color-secondary);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  text-decoration: underline;
 }
 </style>
