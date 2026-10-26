@@ -426,15 +426,68 @@ async function performSave(forceVersion = null) {
         title: formData.value.title,
         content: formData.value.content
       }
+      clearUnsavedBackup(props.post.id)
     }
   } catch (error) {
+    // 저장 실패 시 작성 내용을 기기에 보관해 두고, 다음에 이 노트를 열 때 복구한다
+    saveUnsavedBackup(props.post.id, saveData.title, saveData.content)
     toast.add({
       severity: 'error',
       summary: '저장 실패',
-      detail: error.message || '서버 오류가 발생했습니다.',
-      life: 3000,
+      detail: (error.response?.data?.message || error.message || '서버 오류가 발생했습니다.')
+        + ' 작성한 내용은 이 기기에 임시 보관됩니다.',
+      life: 4000,
     })
   }
+}
+
+// 저장 실패한 내용을 기기에 임시 보관 (노트별)
+const UNSAVED_BACKUP_PREFIX = 'untitles:unsaved:'
+
+function saveUnsavedBackup(postId, title, content) {
+  try {
+    localStorage.setItem(UNSAVED_BACKUP_PREFIX + postId, JSON.stringify({ title, content, savedAt: Date.now() }))
+  } catch {
+    // 저장 공간 부족 등은 무시
+  }
+}
+
+function clearUnsavedBackup(postId) {
+  try {
+    localStorage.removeItem(UNSAVED_BACKUP_PREFIX + postId)
+  } catch {
+    // 무시
+  }
+}
+
+// 서버 내용보다 나중에 보관된 미저장 내용이 있으면 편집기에 되살린다
+function restoreUnsavedBackup() {
+  const post = props.post
+  if (!post?.id || !editor.value) return
+  let backup = null
+  try {
+    backup = JSON.parse(localStorage.getItem(UNSAVED_BACKUP_PREFIX + post.id) || 'null')
+  } catch {
+    backup = null
+  }
+  if (!backup) return
+
+  const serverTime = post.updatedAt ? new Date(post.updatedAt).getTime() : 0
+  if (backup.savedAt <= serverTime || backup.content === (post.content || '')) {
+    clearUnsavedBackup(post.id)
+    return
+  }
+
+  formData.value.title = backup.title ?? formData.value.title
+  editor.value.commands.setContent(backup.content || '')
+  formData.value.content = editor.value.getHTML()
+  toast.add({
+    severity: 'info',
+    summary: '저장되지 않은 내용 복구',
+    detail: '이전에 저장하지 못한 내용을 불러왔습니다. 자동으로 다시 저장합니다.',
+    life: 4000,
+  })
+  triggerAutoSave()
 }
 
 // 충돌 처리: 내 변경사항 유지 (락 획득)
@@ -630,6 +683,7 @@ watch(
 
       setTimeout(() => {
         isInitializing.value = false
+        restoreUnsavedBackup()
       }, 100)
     }
   },
