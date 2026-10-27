@@ -9,8 +9,15 @@
         </span>
       </div>
       <div class="topbar-right">
-        <div v-if="authStore.isAuthenticated" class="save-indicator" :class="{ saving: isSaving, unsaved: hasUnsavedChanges && !isSaving }">
-          <Loader2 v-if="isSaving" class="indicator-icon spinning" />
+        <div v-if="collabPeers.length" class="collab-peers" :title="collabPeers.map((p) => p.name).join(', ') + ' 편집 중'">
+          <span v-for="peer in collabPeers.slice(0, 4)" :key="peer.clientId" class="peer-avatar"
+            :style="{ background: peer.color }">{{ (peer.name || '?').slice(0, 1) }}</span>
+          <span v-if="collabPeers.length > 4" class="peer-more">+{{ collabPeers.length - 4 }}</span>
+        </div>
+        <span v-if="isReadOnly" class="readonly-badge">읽기 전용</span>
+        <div v-if="authStore.isAuthenticated" class="save-indicator"
+          :class="{ saving: showSaving || isConnecting, unsaved: (hasUnsavedChanges && !showSaving) || collabOffline }">
+          <Loader2 v-if="showSaving || isConnecting" class="indicator-icon spinning" />
           <Circle v-else-if="hasUnsavedChanges" class="indicator-icon unsaved-dot" />
           <Check v-else class="indicator-icon" />
           <span>{{ saveIndicatorText }}</span>
@@ -22,8 +29,8 @@
     <div class="editor-body">
       <div class="editor-container">
         <input type="text" v-model="formData.title" placeholder="제목 없음" class="title-input"
-          @keydown.enter.prevent="focusEditor" />
-        <div class="content-area">
+          :readonly="isReadOnly || isConnecting" @keydown.enter.prevent="focusEditor" />
+        <div class="content-area" :class="{ connecting: isConnecting }">
           <EditorContent :editor="editor" class="tiptap-wrapper" />
         </div>
       </div>
@@ -119,9 +126,11 @@
 </template>
 
 <script setup>
-import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, shallowRef, watch, computed, onMounted, onBeforeUnmount } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
-import { useEditor, EditorContent } from '@tiptap/vue-3'
+import { Editor, EditorContent } from '@tiptap/vue-3'
+import Collaboration from '@tiptap/extension-collaboration'
+import CollaborationCaret from '@tiptap/extension-collaboration-caret'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
@@ -158,6 +167,8 @@ import { useGraphStore } from '@/stores/graphStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { postApi } from '@/api/postApi'
 import { createNormalizer, mergeContent, mergeTitle } from '@/utils/noteMerge'
+import { COLLAB_URL, createCollabSession, caretColorFor } from '@/composables/collabSession'
+import { refreshAccessToken } from '@/api/axios'
 
 const lowlight = createLowlight(common)
 const folderStore = useFolderStore()
@@ -202,13 +213,21 @@ const imageInput = ref(null)
 // 변경사항 체크
 const hasUnsavedChanges = computed(() => {
   if (!props.post?.id) return false
+  // 실시간 편집: 편집 서버에 아직 전달되지 않은 입력이 있으면
+  if (collabMode.value) return (collab.value?.unsynced.value || 0) > 0
   return formData.value.title !== originalData.value.title ||
     formData.value.content !== originalData.value.content
 })
 
+const collabOffline = computed(() => collabMode.value && collab.value?.status.value !== 'connected')
+const showSaving = computed(() =>
+  isSaving.value || (collabMode.value && !collabOffline.value && hasUnsavedChanges.value))
+
 // 저장 상태 표시
 const saveIndicatorText = computed(() => {
-  if (isSaving.value) return '저장 중'
+  if (isConnecting.value) return '불러오는 중'
+  if (collabOffline.value) return hasUnsavedChanges.value ? '오프라인 · 연결되면 저장' : '오프라인'
+  if (showSaving.value) return '저장 중'
   if (hasUnsavedChanges.value) return '저장되지 않음'
   return '저장됨'
 })
@@ -239,9 +258,10 @@ const charCount = computed(() => {
 })
 
 // 편집기 확장 목록 (자동 병합용 정규화에도 같은 구성을 쓴다)
-function buildEditorExtensions() {
-  return [
-    StarterKit.configure({ codeBlock: false }),
+function buildEditorExtensions(session = null) {
+  const extensions = [
+    // 링크·밑줄은 아래에서 따로 설정한다. 실시간 편집 중에는 실행 취소를 Collaboration이 맡는다
+    StarterKit.configure({ codeBlock: false, link: false, underline: false, ...(session ? { undoRedo: false } : {}) }),
     Placeholder.configure({ placeholder: '내용을 입력하세요...' }),
     CodeBlockLowlight.configure({ lowlight }),
     TaskList,
@@ -269,18 +289,39 @@ function buildEditorExtensions() {
       onOpen: (postId) => uiStore.requestOpenPost(postId),
     }),
   ]
+  if (session) {
+    const user = authStore.currentUser
+    extensions.push(
+      Collaboration.configure({ document: session.ydoc, field: 'default' }),
+      CollaborationCaret.configure({
+        provider: session.provider,
+        user: { name: user?.nickname || '익명', color: caretColorFor(authStore.userId) },
+      }),
+    )
+  }
+  return extensions
 }
 
-const editor = useEditor({
-  extensions: buildEditorExtensions(),
-  content: '',
-  onUpdate: ({ editor }) => {
-    formData.value.content = editor.getHTML()
-    if (!isInitializing.value) {
-      triggerAutoSave()
-    }
-  },
-})
+// 편집기는 노트마다 새로 만든다 (실시간 편집은 노트별 Y 문서에 묶여 있으므로)
+const editor = shallowRef(null)
+
+function mountEditor(session = null) {
+  const previous = editor.value
+  editor.value = new Editor({
+    extensions: buildEditorExtensions(session),
+    content: '',
+    editable: !session, // 실시간 편집은 첫 동기화가 끝난 뒤에 편집을 연다
+    onUpdate: ({ editor: ed }) => {
+      formData.value.content = ed.getHTML()
+      if (!isInitializing.value) {
+        triggerAutoSave()
+      }
+    },
+  })
+  editor.value.isCollab = !!session
+  previous?.destroy()
+}
+mountEditor()
 
 function focusEditor() { editor.value?.commands.focus() }
 
@@ -585,7 +626,7 @@ async function checkForRemoteChanges() {
   const postId = props.post?.id
   const workspaceId = workspaceStore.currentWorkspaceId
   if (!postId || !workspaceId || !authStore.isAuthenticated || checkingRemote) return
-  if (isInitializing.value || showConflictModal.value || isSavingInProgress.value || isResolvingConflict.value) return
+  if (collabMode.value || isInitializing.value || showConflictModal.value || isSavingInProgress.value || isResolvingConflict.value) return
   if (document.visibilityState !== 'visible') return
 
   checkingRemote = true
@@ -746,6 +787,7 @@ function triggerAutoSave() {
     }
     return
   }
+  if (collabMode.value) return // 실시간 편집 중에는 편집 서버가 저장한다
   if (props.post?.id && !isInitializing.value) autoSave()
 }
 
@@ -772,7 +814,8 @@ function handleBeforeUnload(e) {
 
 // 라우트 변경 방지
 onBeforeRouteLeave((to, from, next) => {
-  if (hasUnsavedChanges.value) {
+  // 실시간 편집은 연결을 닫기 전에 남은 입력을 전달하므로 묻지 않는다
+  if (hasUnsavedChanges.value && !collabMode.value) {
     pendingNavigation.value = next
     showUnsavedModal.value = true
     return false
@@ -816,70 +859,116 @@ function loadIntoEditor(content) {
   originalData.value = { ...originalData.value, content: normalized }
 }
 
+// ===== 실시간 편집 =====
+const collab = shallowRef(null) // 지금 노트의 실시간 편집 연결
+const collabMode = ref(false) // 실시간 편집으로 동작 중인지 (아니면 일반 저장 방식)
+const isConnecting = ref(false)
+const COLLAB_SYNC_TIMEOUT = 6000
+let openSeq = 0
+
+const collabPeers = computed(() => collab.value?.peers.value || [])
+const isReadOnly = computed(() => collabMode.value && !!collab.value?.readOnly.value)
+
+function teardownCollab() {
+  collab.value?.destroy()
+  collab.value = null
+  collabMode.value = false
+}
+
+async function refreshTokenForCollab() {
+  try {
+    await refreshAccessToken()
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function openPost(post) {
+  const seq = ++openSeq
+  autoSave.cancel()
+  hasPendingSave.value = false
+  showConflictModal.value = false
+  conflictLatestData.value = null
+  teardownCollab()
+  isInitializing.value = true
+
+  formData.value = {
+    title: post?.title || '',
+    content: post?.content || '',
+    folderId: post?.folderId || null
+  }
+  originalData.value = { title: post?.title || '', content: post?.content || '' }
+  currentVersion.value = post?.version ?? null
+
+  const workspaceId = workspaceStore.currentWorkspaceId
+  if (post?.id && COLLAB_URL && authStore.isAuthenticated && workspaceId) {
+    const session = createCollabSession({
+      workspaceId,
+      postId: post.id,
+      getToken: () => localStorage.getItem('accessToken'),
+      refreshToken: refreshTokenForCollab,
+      onRemoteTitle: (title) => {
+        if (collab.value === session) formData.value.title = title
+        if (props.post?.id === post.id) folderStore.updatePostLocally(post.id, { title: title.trim() || '무제' })
+      },
+    })
+    collab.value = session
+    mountEditor(session)
+    isConnecting.value = true
+    const ok = await session.waitForSync(COLLAB_SYNC_TIMEOUT)
+    if (seq !== openSeq) return // 그사이 다른 노트를 열었음
+    isConnecting.value = false
+
+    if (ok) {
+      collabMode.value = true
+      formData.value.title = session.title || post.title || ''
+      formData.value.content = editor.value.getHTML()
+      originalData.value = { title: formData.value.title, content: formData.value.content }
+      editor.value.setEditable(!session.readOnly.value)
+      setTimeout(() => {
+        if (seq === openSeq) isInitializing.value = false
+      }, 0)
+      return
+    }
+    // 실시간 편집 서버에 연결되지 않음 → 일반 저장 방식(자동 병합)으로 편집
+    teardownCollab()
+  }
+
+  if (!editor.value || editor.value.isCollab) mountEditor()
+  if (post) {
+    loadIntoEditor(post.content || '')
+  } else {
+    editor.value.commands.setContent('')
+  }
+
+  setTimeout(() => {
+    if (seq !== openSeq) return
+    isInitializing.value = false
+    restoreUnsavedBackup()
+  }, 100)
+}
+
 watch(
   () => props.post?.id,
   (newId, oldId) => {
-    if (newId !== oldId) {
-      autoSave.cancel()
-      hasPendingSave.value = false
-      showConflictModal.value = false
-      conflictLatestData.value = null
-      isInitializing.value = true
-
-      if (props.post) {
-        formData.value = {
-          title: props.post.title || '',
-          content: props.post.content || '',
-          folderId: props.post.folderId || null
-        }
-        originalData.value = {
-          title: props.post.title || '',
-          content: props.post.content || ''
-        }
-        currentVersion.value = props.post.version
-
-        if (editor.value) {
-          loadIntoEditor(props.post.content || '')
-        }
-      } else {
-        formData.value = { title: '', content: '', folderId: null }
-        originalData.value = { title: '', content: '' }
-        currentVersion.value = null
-        if (editor.value) {
-          editor.value.commands.setContent('')
-        }
-      }
-
-      setTimeout(() => {
-        isInitializing.value = false
-        restoreUnsavedBackup()
-      }, 100)
-    }
+    if (newId !== oldId) openPost(props.post)
   },
   { immediate: true }
 )
 
-// editor 초기화 완료 후 content 설정
-watch(
-  () => editor.value,
-  (newEditor) => {
-    if (newEditor && formData.value.content) {
-      isInitializing.value = true
-      loadIntoEditor(formData.value.content)
-      setTimeout(() => {
-        isInitializing.value = false
-      }, 100)
-    }
-  }
-)
-
-// title 변경 시 자동저장
+// title 변경 시 자동저장 (실시간 편집 중에는 Y 문서의 제목을 고친다)
 watch(
   () => formData.value.title,
   (newTitle, oldTitle) => {
-    if (!isInitializing.value && oldTitle !== undefined) {
-      triggerAutoSave()
+    if (isInitializing.value || oldTitle === undefined) return
+    const session = collab.value
+    if (collabMode.value && session) {
+      session.setTitle(newTitle)
+      if (props.post?.id) folderStore.updatePostLocally(props.post.id, { title: newTitle.trim() || '무제' })
+      return
     }
+    triggerAutoSave()
   }
 )
 
@@ -897,6 +986,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('focus', checkForRemoteChanges)
   clearInterval(remoteCheckTimer)
   normalizeHtml.destroy()
+  teardownCollab()
   editor.value?.destroy()
 })
 </script>
@@ -929,6 +1019,80 @@ onBeforeUnmount(() => {
 .breadcrumb-icon {
   width: 14px;
   height: 14px;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+}
+
+.collab-peers {
+  display: flex;
+  align-items: center;
+  margin-right: 0.75rem;
+}
+
+.peer-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #18181b;
+  border: 2px solid var(--surface-ground);
+  margin-left: -6px;
+}
+
+.peer-avatar:first-child {
+  margin-left: 0;
+}
+
+.peer-more {
+  margin-left: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--text-color-secondary);
+}
+
+.readonly-badge {
+  margin-right: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--text-color-secondary);
+  border: 1px solid var(--surface-border);
+  border-radius: 999px;
+  padding: 0.125rem 0.5rem;
+}
+
+.content-area.connecting {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* 다른 사람의 커서 (CollaborationCaret) */
+:deep(.collaboration-carets__caret) {
+  border-left: 1px solid #0d0d0d;
+  border-right: 1px solid #0d0d0d;
+  margin-left: -1px;
+  margin-right: -1px;
+  pointer-events: none;
+  position: relative;
+  word-break: normal;
+}
+
+:deep(.collaboration-carets__label) {
+  border-radius: 3px 3px 3px 0;
+  color: #0d0d0d;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  left: -1px;
+  line-height: normal;
+  padding: 0.0625rem 0.3rem;
+  position: absolute;
+  top: -1.3em;
+  user-select: none;
+  white-space: nowrap;
 }
 
 .save-indicator {
