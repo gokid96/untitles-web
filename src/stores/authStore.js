@@ -4,6 +4,7 @@ import { userApi } from '@/api/userApi'
 import { useWorkspaceStore } from './workspaceStore'
 import { useFolderStore } from './folderStore'
 import { usePostStore } from './postStore'
+import { setTokens, clearTokens as clearStoredTokens } from '@/utils/tokenStore'
 
 export const useAuthStore = defineStore('auth', () => {
   const currentUser = ref(null)
@@ -12,14 +13,12 @@ export const useAuthStore = defineStore('auth', () => {
 
   // 토큰 저장
   function saveTokens(accessToken, refreshToken) {
-    localStorage.setItem('accessToken', accessToken)
-    localStorage.setItem('refreshToken', refreshToken)
+    setTokens(accessToken, refreshToken)
   }
 
   // 토큰 삭제
   function clearTokens() {
-    localStorage.removeItem('accessToken')
-    localStorage.removeItem('refreshToken')
+    clearStoredTokens()
   }
 
   // 앱 시작 시 토큰으로 로그인 상태 복원

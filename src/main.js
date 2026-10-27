@@ -56,7 +56,15 @@ app.use(PrimeVue, {
 })
 app.use(ToastService)
 
-app.mount('#app')
+// 스토어 앱: 휴대폰 보안 저장소의 로그인 정보를 먼저 되살린 뒤 화면을 띄운다
+if (isNativeApp) {
+  import('./utils/tokenStore')
+    .then(({ restoreTokens }) => restoreTokens())
+    .catch(() => {})
+    .finally(() => app.mount('#app'))
+} else {
+  app.mount('#app')
+}
 
 // 스토어 앱으로 실행 중일 때만 네이티브 초기화 (웹에서는 불러오지 않음)
 if (isNativeApp) {

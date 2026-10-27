@@ -1,6 +1,7 @@
 import axios from 'axios'
 import router from '@/router'
 import { useAppStore } from '@/stores/appStore'
+import { setTokens, clearTokens } from '@/utils/tokenStore'
 
 const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8070/api/v1'
 
@@ -43,8 +44,7 @@ function refreshAccessToken() {
       ? axios.post(`${baseURL}/auth/refresh`, { refreshToken }, { timeout: 15000 })
           .then((res) => {
             const tokens = res.data?.data ?? res.data
-            localStorage.setItem('accessToken', tokens.accessToken)
-            localStorage.setItem('refreshToken', tokens.refreshToken)
+            setTokens(tokens.accessToken, tokens.refreshToken)
             return tokens.accessToken
           })
           .catch(async (err) => {
@@ -118,8 +118,7 @@ apiClient.interceptors.response.use(
     switch (status) {
       case 401:
         if (!AUTH_PAGES.includes(currentPath)) {
-          localStorage.removeItem('accessToken')
-          localStorage.removeItem('refreshToken')
+          clearTokens()
           appStore.showSessionExpired()
         }
         break

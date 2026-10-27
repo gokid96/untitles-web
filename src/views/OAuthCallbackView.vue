@@ -8,6 +8,7 @@
 </template>
 
 <script setup>
+import { setTokens, clearTokens } from '@/utils/tokenStore'
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
@@ -56,8 +57,7 @@ onMounted(async () => {
     statusMessage.value = '사용자 정보 확인 중...'
 
     // 토큰 저장
-    localStorage.setItem('accessToken', accessToken)
-    localStorage.setItem('refreshToken', refreshToken)
+    setTokens(accessToken, refreshToken)
 
     // 사용자 정보 로드
     const success = await authStore.loadUserFromStorage()
@@ -80,8 +80,7 @@ onMounted(async () => {
   } catch (error) {
     console.error('OAuth 콜백 처리 실패:', error)
 
-    localStorage.removeItem('accessToken')
-    localStorage.removeItem('refreshToken')
+    clearTokens()
 
     toast.add({
       severity: 'error',
