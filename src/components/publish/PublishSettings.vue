@@ -27,7 +27,8 @@
       <div v-if="!publishAll" class="individual-section">
         <label class="section-label">공개할 항목 선택</label>
 
-        <div class="tree-container">
+        <p v-if="!hasIndividualItems" class="tree-empty">아직 노트가 없어요. 노트를 만들면 여기서 골라 공개할 수 있어요.</p>
+        <div v-else class="tree-container">
           <!-- 루트 게시글 -->
           <div v-for="post in settings.rootPosts" :key="post.postId" class="tree-item">
             <Checkbox
@@ -58,7 +59,8 @@
         <label class="section-label">공개에서 제외할 항목</label>
         <p class="section-hint">선택된 항목은 전체공개에서 제외됩니다</p>
 
-        <div class="tree-container">
+        <p v-if="!hasExcludeItems" class="tree-empty">아직 노트가 없어요. 노트를 만들면 여기서 제외할 노트를 고를 수 있어요.</p>
+        <div v-else class="tree-container">
           <!-- 루트 게시글 제외 -->
           <div v-for="post in settings.rootPosts" :key="'ex-' + post.postId" class="tree-item">
             <Checkbox
@@ -136,6 +138,12 @@ const excludedPostIdsMap = reactive({})
 const isSaving = ref(false)
 
 // 폴더를 플랫하게 펼침 (전체공개 모드 제외 설정용)
+// 고를 노트·폴더가 없으면 빈 테두리 대신 안내 문구를 보여준다
+const hasIndividualItems = computed(() =>
+  (settings.value?.rootPosts?.length || 0) + (settings.value?.folders?.length || 0) > 0)
+const hasExcludeItems = computed(() =>
+  (settings.value?.rootPosts?.length || 0) + flatFolders.value.length > 0)
+
 const flatFolders = computed(() => {
   if (!settings.value?.folders) return []
   const result = []
@@ -335,6 +343,15 @@ function openUrl() {
 }
 
 /* 트리 */
+.tree-empty {
+  margin: 0;
+  padding: 0.25rem 0;
+  font-size: 0.8125rem;
+  color: var(--text-color-secondary);
+  line-height: 1.5;
+  word-break: keep-all;
+}
+
 .tree-container {
   max-height: 320px;
   overflow-y: auto;
