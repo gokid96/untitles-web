@@ -23,7 +23,8 @@ const APP_CALLBACK = 'net.untitles.app://oauth/callback'
 const GOOGLE_WEB_CLIENT_ID = import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID || ''
 const GOOGLE_IOS_CLIENT_ID = import.meta.env.VITE_GOOGLE_IOS_CLIENT_ID || ''
 const APPLE_WEB_CLIENT_ID = import.meta.env.VITE_APPLE_WEB_CLIENT_ID || ''  // 웹용 Services ID
-const APPLE_WEB_REDIRECT_URI = import.meta.env.VITE_APPLE_WEB_REDIRECT_URI || `${typeof window !== 'undefined' ? window.location.origin : ''}/oauth/apple`
+// 애플이 로그인 결과를 보내는 우리 서버 주소 (애플 개발자 사이트의 Return URL과 같아야 함)
+const APPLE_WEB_REDIRECT_URI = `${API_BASE_URL}/auth/social/apple/callback`
 
 const enabled = new Set(
   (import.meta.env.VITE_SOCIAL_PROVIDERS || '')
@@ -58,7 +59,7 @@ export async function startSocialLogin(provider) {
     if (provider === 'kakao') return loginWithBrowser('kakao')
     if (provider === 'apple' || provider === 'google') return loginNative(provider)
   } else {
-    if (provider === 'apple') return loginWithAppleJs()
+    if (provider === 'apple') return loginWithAppleRedirect()
     // 카카오·구글: 서버 리다이렉트 (끝나면 /oauth/callback?code=...)
     window.location.href = `${OAUTH_BASE_URL}/oauth2/authorization/${provider}`
     return new Promise(() => {})
@@ -195,48 +196,26 @@ async function loginWithBrowser(provider) {
   })
 }
 
-// ===== 웹: 애플 (애플 JS 팝업) =====
+// ===== 웹: 애플 (애플 로그인 페이지로 이동 → 우리 서버가 결과를 받아 /oauth/callback 으로) =====
 
-let appleJsPromise = null
-function loadAppleJs() {
-  if (!appleJsPromise) {
-    appleJsPromise = new Promise((resolve, reject) => {
-      const script = document.createElement('script')
-      script.src = 'https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/ko_KR/appleid.auth.js'
-      script.onload = () => resolve(window.AppleID)
-      script.onerror = () => {
-        appleJsPromise = null
-        reject(new Error('애플 로그인을 불러오지 못했습니다.'))
-      }
-      document.head.appendChild(script)
-    })
-  }
-  return appleJsPromise
-}
+export const APPLE_STATE_KEY = 'untitles:apple-state'
 
-async function loginWithAppleJs() {
-  const AppleID = await loadAppleJs()
-  const rawNonce = randomNonce()
-  AppleID.auth.init({
-    clientId: APPLE_WEB_CLIENT_ID,
-    scope: 'name email',
-    redirectURI: APPLE_WEB_REDIRECT_URI,
-    nonce: await sha256Hex(rawNonce),
-    usePopup: true,
-  })
-  let data
+function loginWithAppleRedirect() {
+  // 위조된 로그인 결과를 막기 위해 무작위 state를 기억해 두고, 돌아왔을 때 같은지 확인한다
+  const state = randomNonce()
   try {
-    data = await AppleID.auth.signIn()
-  } catch (error) {
-    if (isCancel(error) || error?.error === 'popup_closed_by_user') throw new SocialLoginCancelled()
-    throw new Error('애플 로그인에 실패했습니다.')
+    sessionStorage.setItem(APPLE_STATE_KEY, state)
+  } catch {
+    // 저장소를 못 쓰면 state 확인 없이 진행
   }
-  const name = data.user?.name ? [data.user.name.lastName, data.user.name.firstName].filter(Boolean).join('') : undefined
-  const response = await userApi.socialLogin('apple', {
-    idToken: data.authorization?.id_token,
-    authorizationCode: data.authorization?.code,
-    nonce: rawNonce,
-    name,
+  const params = new URLSearchParams({
+    client_id: APPLE_WEB_CLIENT_ID,
+    redirect_uri: APPLE_WEB_REDIRECT_URI,
+    response_type: 'code id_token',
+    response_mode: 'form_post',
+    scope: 'name email',
+    state,
   })
-  return response.data
+  window.location.href = `https://appleid.apple.com/auth/authorize?${params}`
+  return new Promise(() => {})
 }

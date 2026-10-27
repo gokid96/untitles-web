@@ -13,7 +13,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import { usePostStore } from '@/stores/postStore'
 import { restoreGuestDraft, getErrorMessage } from '@/utils/helpers'
-import { exchangeLoginCode } from '@/utils/socialAuth'
+import { exchangeLoginCode, APPLE_STATE_KEY } from '@/utils/socialAuth'
 import { useToast } from 'primevue/usetoast'
 
 /**
@@ -38,6 +38,20 @@ onMounted(async () => {
 
   const code = route.query.code
   if (!code) return fail('로그인 정보를 받지 못했습니다. 다시 시도해주세요.')
+
+  // 애플 웹 로그인은 떠날 때 기억한 state와 돌아온 state가 같아야 한다 (위조된 로그인 방지)
+  if (route.query.provider === 'apple') {
+    let expected = null
+    try {
+      expected = sessionStorage.getItem(APPLE_STATE_KEY)
+      sessionStorage.removeItem(APPLE_STATE_KEY)
+    } catch {
+      expected = null
+    }
+    if (expected && route.query.state !== expected) {
+      return fail('로그인 요청이 올바르지 않습니다. 다시 시도해주세요.')
+    }
+  }
 
   try {
     const loginResponse = await exchangeLoginCode(String(code))
