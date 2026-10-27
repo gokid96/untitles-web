@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { workspaceApi } from '@/api/workspaceApi'
+import { invitationApi } from '@/api/invitationApi'
 
 export const useWorkspaceStore = defineStore('workspace', () => {
   // 상태
@@ -9,6 +10,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   
   // 워크스페이스 생성 제한 정보
   const workspaceLimit = ref({ count: 0, limit: 3 })
+
+  // 나에게 온 대기 중인 초대
+  const myInvitations = ref([])
 
   // 현재 워크스페이스
   const currentWorkspace = computed(() => {
@@ -50,8 +54,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         currentWorkspaceId.value = workspaces.value[0].workspaceId
       }
 
-      // 워크스페이스 제한 정보도 함께 로드
-      await loadWorkspaceLimit()
+      // 워크스페이스 제한 정보와 받은 초대도 함께 로드
+      await Promise.all([loadWorkspaceLimit(), loadMyInvitations()])
 
       return workspaces.value
     } catch (error) {
@@ -128,20 +132,44 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     }
   }
 
-  // 멤버 초대
-  // 이메일 없이 가입한 사용자도 있으므로 userId로 초대
-  async function inviteMember(workspaceId, userId, role) {
+  // 초대 보내기: 가입한 사용자는 userId, 아직 가입하지 않은 사람은 이메일로.
+  // 받은 사람이 수락해야 멤버가 된다
+  async function inviteMember(workspaceId, { userId, email, role }) {
+    const response = await invitationApi.invite(workspaceId, { userId, email, role })
+    return response.data
+  }
+
+  async function loadInvitations(workspaceId) {
+    const response = await invitationApi.pending(workspaceId)
+    return response.data
+  }
+
+  async function cancelInvitation(workspaceId, invitationId) {
+    await invitationApi.cancel(workspaceId, invitationId)
+  }
+
+  async function loadMyInvitations() {
     try {
-      const response = await workspaceApi.inviteMember(workspaceId, { userId, role })
-      
-      // 워크스페이스 목록 갱신 (memberCount 업데이트)
-      await loadWorkspaces()
-      
-      return response.data
+      const response = await invitationApi.mine()
+      myInvitations.value = response.data || []
     } catch (error) {
-      console.error('Failed to invite member:', error)
-      throw error
+      // 예전 서버 등에서 실패해도 다른 화면에는 영향 없게
+      console.error('Failed to load invitations:', error)
     }
+    return myInvitations.value
+  }
+
+  // 수락하면 그 워크스페이스로 이동할 수 있도록 목록을 새로 받는다
+  async function acceptInvitation(token) {
+    const response = await invitationApi.accept(token)
+    myInvitations.value = myInvitations.value.filter((i) => i.token !== token)
+    await loadWorkspaces()
+    return response.data?.workspaceId
+  }
+
+  async function declineInvitation(token) {
+    await invitationApi.decline(token)
+    myInvitations.value = myInvitations.value.filter((i) => i.token !== token)
   }
 
   // 멤버 권한 변경
@@ -191,6 +219,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     workspaces.value = []
     currentWorkspaceId.value = null
     workspaceLimit.value = { count: 0, limit: 3 }
+    myInvitations.value = []
   }
 
   // 폴더 count 로컬 업데이트
@@ -214,6 +243,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     workspaces,
     currentWorkspaceId,
     workspaceLimit,
+    myInvitations,
     // computed
     currentWorkspace,
     myRole,
@@ -228,6 +258,11 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     deleteWorkspace,
     loadMembers,
     inviteMember,
+    loadInvitations,
+    cancelInvitation,
+    loadMyInvitations,
+    acceptInvitation,
+    declineInvitation,
     updateMemberRole,
     removeMember,
     leaveWorkspace,

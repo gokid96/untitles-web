@@ -97,6 +97,19 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   // 사용자 정보 수정
+  // 서버의 최신 내 정보로 갱신 (소셜 연결·해제 후 등)
+  async function refreshUser() {
+    const response = await userApi.getUserInfo()
+    currentUser.value = { ...currentUser.value, ...response.data }
+    return currentUser.value
+  }
+
+  async function changeEmail(email, code) {
+    const response = await userApi.changeEmail(email, code)
+    currentUser.value = { ...currentUser.value, ...response.data }
+    return currentUser.value
+  }
+
   async function updateUserInfo(data) {
     const response = await userApi.updateUser(data)
     const userData = response.data
@@ -116,6 +129,8 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     logout,
     deleteAccount,
+    refreshUser,
+    changeEmail,
     updateUserInfo,
   }
 })

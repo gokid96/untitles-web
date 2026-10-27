@@ -135,7 +135,8 @@ function isCancel(error) {
   return /cancel|1001|12501|user denied|popup_closed/.test(message)
 }
 
-async function loginNative(provider) {
+// 앱 안 로그인 창으로 제공자의 증명(ID 토큰 등)을 받는다
+async function nativeCredential(provider) {
   const SocialLogin = await getSocialLogin()
   try {
     if (provider === 'apple') {
@@ -146,21 +147,23 @@ async function loginNative(provider) {
         options: { scopes: ['email', 'name'], nonce: await sha256Hex(rawNonce) },
       })
       const name = [result.profile?.familyName, result.profile?.givenName].filter(Boolean).join('') || undefined
-      const response = await userApi.socialLogin('apple', {
-        idToken: result.idToken,
-        authorizationCode: result.authorizationCode,
-        nonce: rawNonce,
-        name,
-      })
-      return response.data
+      return { idToken: result.idToken, authorizationCode: result.authorizationCode, nonce: rawNonce, name }
     }
-
     const { result } = await SocialLogin.login({ provider: 'google', options: { scopes: ['email', 'profile'] } })
     if (!result?.idToken) throw new Error('구글 로그인 정보를 받지 못했습니다.')
-    const response = await userApi.socialLogin('google', { idToken: result.idToken })
-    return response.data
+    return { idToken: result.idToken }
   } catch (error) {
     if (isCancel(error)) throw new SocialLoginCancelled()
+    throw error
+  }
+}
+
+async function loginNative(provider) {
+  const credential = await nativeCredential(provider)
+  try {
+    const response = await userApi.socialLogin(provider, credential)
+    return response.data
+  } catch (error) {
     throw toLinkRequired(error)
   }
 }
@@ -169,7 +172,18 @@ async function loginNative(provider) {
 
 let pendingBrowserLogin = null
 
-async function loginWithBrowser(provider) {
+function loginWithBrowser(provider) {
+  return openAppBrowser(`${OAUTH_BASE_URL}/oauth2/authorization/${provider}?target=app`, async (params) => {
+    const link = params.get('link')
+    if (link) throw new SocialLinkRequired({ linkToken: link, provider: provider.toUpperCase() })
+    const error = params.get('error')
+    if (error) throw new Error(error)
+    return exchangeLoginCode(params.get('code'))
+  })
+}
+
+// 앱 안 브라우저로 서버의 소셜 로그인 주소를 열고, 앱 전용 주소로 돌아오면 handle(주소의 파라미터)로 결과를 만든다
+async function openAppBrowser(url, handle) {
   const [{ Browser }, { App }] = await Promise.all([import('@capacitor/browser'), import('@capacitor/app')])
 
   if (pendingBrowserLogin) pendingBrowserLogin.reject(new SocialLoginCancelled())
@@ -195,12 +209,8 @@ async function loginWithBrowser(provider) {
       callbackReceived = true
       Browser.close().catch(() => {})
       const params = new URL(url.replace('net.untitles.app://', 'https://app.local/')).searchParams
-      const link = params.get('link')
-      if (link) return finish(reject, new SocialLinkRequired({ linkToken: link, provider: provider.toUpperCase() }))
-      const error = params.get('error')
-      if (error) return finish(reject, new Error(error))
       try {
-        finish(resolve, await exchangeLoginCode(params.get('code')))
+        finish(resolve, await handle(params))
       } catch (e) {
         finish(reject, e)
       }
@@ -213,7 +223,7 @@ async function loginWithBrowser(provider) {
       }, 1500)
     }).then((h) => handles.push(h))
 
-    Browser.open({ url: `${OAUTH_BASE_URL}/oauth2/authorization/${provider}?target=app`, presentationStyle: 'popover' })
+    Browser.open({ url, presentationStyle: 'popover' })
       .catch((e) => finish(reject, e))
   })
 }
@@ -222,9 +232,10 @@ async function loginWithBrowser(provider) {
 
 export const APPLE_STATE_KEY = 'untitles:apple-state'
 
-function loginWithAppleRedirect() {
-  // 위조된 로그인 결과를 막기 위해 무작위 state를 기억해 두고, 돌아왔을 때 같은지 확인한다
-  const state = randomNonce()
+function loginWithAppleRedirect(linkIntent) {
+  // 위조된 로그인 결과를 막기 위해 무작위 state를 기억해 두고, 돌아왔을 때 같은지 확인한다.
+  // 내 정보에서 연결하기면 state 끝에 ".일회용표시"를 붙인다 (서버가 연결로 처리)
+  const state = linkIntent ? `${randomNonce()}.${linkIntent}` : randomNonce()
   try {
     sessionStorage.setItem(APPLE_STATE_KEY, state)
   } catch {
@@ -240,4 +251,33 @@ function loginWithAppleRedirect() {
   })
   window.location.href = `https://appleid.apple.com/auth/authorize?${params}`
   return new Promise(() => {})
+}
+
+// ===== 내 정보: 로그인한 상태에서 소셜 계정 연결 =====
+
+/**
+ * 소셜 계정을 지금 계정에 연결한다.
+ * @returns true면 연결 완료. 웹 리다이렉트 방식은 페이지가 이동하므로 돌아오지 않는다 (/oauth/callback?linked=...)
+ */
+export async function startSocialLink(provider) {
+  if (isNativeApp && (provider === 'apple' || provider === 'google')) {
+    await userApi.linkSocial(provider, await nativeCredential(provider))
+    return true
+  }
+  const intent = await userApi.socialLinkIntent()
+  if (isNativeApp) {
+    return openAppBrowser(`${OAUTH_BASE_URL}/oauth2/authorization/${provider}?target=app&link=${intent}`, async (params) => {
+      const error = params.get('error')
+      if (error) throw new Error(error)
+      return true
+    })
+  }
+  if (provider === 'apple') return loginWithAppleRedirect(intent)
+  window.location.href = `${OAUTH_BASE_URL}/oauth2/authorization/${provider}?link=${intent}`
+  return new Promise(() => {})
+}
+
+/** 연결할 수 있는 제공자 (이 기기에서 쓸 수 있는 것) */
+export function linkableProviders() {
+  return availableProviders()
 }

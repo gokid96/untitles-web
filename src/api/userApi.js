@@ -92,6 +92,34 @@ export const userApi = {
     return response
   },
 
+  // 이메일 변경: 새 이메일로 인증번호 받기
+  async sendEmailChangeCode(email) {
+    return apiClient.post('/users/me/email/code', { email })
+  },
+
+  // 이메일 변경: 인증번호 확인 후 변경
+  async changeEmail(email, code) {
+    const response = await apiClient.post('/users/me/email', { email, code })
+    response.data = transformUser(response.data)
+    return response
+  },
+
+  // 소셜 계정 연결 (리다이렉트 방식에 붙일 일회용 표시)
+  async socialLinkIntent() {
+    const response = await apiClient.post('/users/me/social/link-intent')
+    return response.data.intent
+  },
+
+  // 소셜 계정 연결 (앱의 구글·애플: ID 토큰)
+  async linkSocial(provider, payload) {
+    return apiClient.post(`/users/me/social/${provider}`, payload)
+  },
+
+  // 소셜 계정 연결 해제
+  async unlinkSocial(provider) {
+    return apiClient.delete(`/users/me/social/${provider}`)
+  },
+
   // 회원 탈퇴
   async deleteAccount() {
     return apiClient.delete('/users/me')

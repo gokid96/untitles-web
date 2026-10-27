@@ -23,6 +23,13 @@ const router = createRouter({
       meta: { requiresAuth: false, guestOnly: true },
     },
     {
+      // 초대 메일의 링크
+      path: '/invitations/:token',
+      name: 'invitation',
+      component: () => import('@/views/InvitationView.vue'),
+      meta: { requiresAuth: false },
+    },
+    {
       path: '/terms',
       name: 'terms',
       component: () => import('@/views/TermsView.vue'),

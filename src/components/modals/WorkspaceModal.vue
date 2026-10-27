@@ -81,26 +81,27 @@
       <!-- 멤버 탭 (개인 워크스페이스는 초대 불가라 숨김) -->
       <TabPanel v-if="!isPersonalWorkspace" header="멤버">
         <div class="tab-content">
-          <!-- 멤버 검색 -->
+          <!-- 초대: 닉네임으로 찾거나 이메일 주소를 입력 (받은 사람이 수락해야 멤버가 됨) -->
           <div class="search-section" v-if="!isEditMode || workspaceStore.isAdmin">
             <div class="search-wrapper">
               <Search class="search-icon" />
               <!-- 브라우저 주소 자동완성(저장된 이메일 목록)이 뜨지 않도록 검색 입력으로 지정 -->
               <InputText v-model="searchEmail" type="search" name="member-query" autocomplete="off" role="combobox"
-                aria-autocomplete="list" placeholder="닉네임 또는 이메일 전체 주소로 검색" class="search-input"
-                @input="handleSearchInput" @focus="showSearchResults = true" />
+                aria-autocomplete="list" placeholder="닉네임 또는 이메일로 초대" class="search-input"
+                @input="handleSearchInput" @focus="showSearchResults = true" @keydown.enter.prevent="inviteTypedEmail" />
               <Dropdown v-model="inviteRole" :options="availableRoles" optionLabel="label" optionValue="value"
                 class="role-select" />
             </div>
+            <p class="invite-hint">초대받은 사람이 수락하면 멤버가 돼요. 초대는 7일 동안 유효해요.</p>
 
-            <!-- 멤버 제한 안내 -->
-            <div v-if="isEditMode && members.length >= 5" class="limit-notice">
+            <!-- 멤버 제한 안내 (대기 중인 초대 포함) -->
+            <div v-if="isFull" class="limit-notice">
               <Info class="notice-icon" />
-              <span>워크스페이스 멤버는 최대 5명까지 초대할 수 있습니다.</span>
+              <span>멤버는 대기 중인 초대를 포함해 최대 {{ MEMBER_LIMIT }}명까지예요.</span>
             </div>
 
             <!-- 검색 결과 -->
-            <div v-if="showSearchResults && searchResults.length > 0 && (!isEditMode || members.length < 5)" class="search-dropdown">
+            <div v-if="showSearchResults && !isFull && (searchResults.length > 0 || typedEmail)" class="search-dropdown">
               <div v-for="user in searchResults" :key="user.userId" class="search-item" @click="handleAddMember(user)">
                 <div class="user-avatar" :style="{ backgroundColor: getAvatarColor(user.nickname || user.email) }">
                   {{ (user.nickname || user.email).charAt(0).toUpperCase() }}
@@ -109,33 +110,34 @@
                   <span class="user-name">{{ user.nickname || '사용자' }}</span>
                   <span class="user-email">{{ user.email }}</span>
                 </div>
-                <Button :label="isEditMode ? '초대' : '추가'" size="small" text class="add-btn"
-                  :loading="invitingUserId === user.userId" />
+                <Button label="초대" size="small" text class="add-btn" :loading="invitingKey === `u${user.userId}`" />
+              </div>
+              <div v-if="typedEmail" class="search-item" @click="inviteTypedEmail">
+                <div class="user-avatar email-avatar"><Mail class="mail-icon" /></div>
+                <div class="user-info">
+                  <span class="user-name">{{ typedEmail }}</span>
+                  <span class="user-email">이메일로 초대 보내기</span>
+                </div>
+                <Button label="초대" size="small" text class="add-btn" :loading="invitingKey === `e${typedEmail}`" />
               </div>
             </div>
           </div>
 
-          <!-- 멤버 목록 -->
-          <div class="members-section">
+          <!-- 멤버 목록 (기존 워크스페이스) -->
+          <div v-if="isEditMode" class="members-section">
             <div class="members-header">
-              <span class="members-title">
-                {{ isEditMode ? '멤버' : '초대 대기' }}
-                <span class="members-count">{{ memberList.length }}</span>
-              </span>
+              <span class="members-title">멤버 <span class="members-count">{{ memberList.length }}</span></span>
             </div>
-
-            <div v-if="memberList.length === 0" class="empty-state">
-              <Users class="empty-icon" />
-              <p>{{ isEditMode ? '멤버가 없습니다' : '초대할 멤버를 검색해서 추가하세요' }}</p>
-            </div>
-
-            <div v-else class="members-list">
-              <div v-for="member in memberList" :key="member.userId || member.memberId" class="member-card">
-                <div class="member-avatar" :style="{ backgroundColor: getAvatarColor(member.nickname || member.email) }">
+            <div class="members-list">
+              <div v-for="member in memberList" :key="member.memberId" class="member-card">
+                <div class="member-avatar" :style="{ backgroundColor: getAvatarColor(member.nickname || member.email || '?') }">
                   {{ getMemberInitial(member) }}
                 </div>
                 <div class="member-info">
-                  <span class="member-name">{{ member.nickname || member.email }}</span>
+                  <span class="member-name">
+                    {{ member.nickname || member.email }}
+                    <span v-if="member.userId === authStore.userId" class="me-tag">나</span>
+                  </span>
                   <span class="member-email">{{ member.email }}</span>
                 </div>
                 <div class="member-actions">
@@ -146,7 +148,48 @@
                     {{ getRoleLabel(member.role) }}
                   </span>
                   <Button v-if="canRemoveMember(member)" severity="secondary" text rounded size="small"
-                    class="remove-btn" @click="handleRemoveMember(member)">
+                    class="remove-btn" aria-label="멤버 내보내기" @click="handleRemoveMember(member)">
+                    <template #icon>
+                      <X class="remove-icon" />
+                    </template>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 대기 중인 초대 (기존 워크스페이스는 서버의 초대, 새 워크스페이스는 만든 뒤 보낼 초대) -->
+          <div v-if="!isEditMode || workspaceStore.isAdmin" class="members-section">
+            <div class="members-header">
+              <span class="members-title">
+                {{ isEditMode ? '대기 중인 초대' : '보낼 초대' }}
+                <span class="members-count">{{ inviteList.length }}</span>
+              </span>
+            </div>
+            <div v-if="inviteList.length === 0" class="empty-state">
+              <Mail class="empty-icon" />
+              <p>{{ isEditMode ? '대기 중인 초대가 없어요' : '만들면서 초대할 사람을 추가할 수 있어요' }}</p>
+            </div>
+            <div v-else class="members-list">
+              <div v-for="invite in inviteList" :key="invite.key" class="member-card pending">
+                <div class="member-avatar" :style="{ backgroundColor: getAvatarColor(invite.nickname || invite.email || '?') }">
+                  <Mail v-if="!invite.nickname" class="mail-icon" />
+                  <template v-else>{{ invite.nickname.charAt(0).toUpperCase() }}</template>
+                </div>
+                <div class="member-info">
+                  <span class="member-name">{{ invite.nickname || invite.email }}</span>
+                  <span class="member-email">{{ inviteSubtitle(invite) }}</span>
+                </div>
+                <div class="member-actions">
+                  <Dropdown v-if="!isEditMode" :modelValue="invite.role"
+                    @update:modelValue="(val) => (invite.role = val)" :options="availableRoles"
+                    optionLabel="label" optionValue="value" class="role-dropdown" />
+                  <span v-else class="role-tag" :class="'role-' + invite.role?.toLowerCase()">
+                    {{ getRoleLabel(invite.role) }}
+                  </span>
+                  <Button severity="secondary" text rounded size="small" class="remove-btn always"
+                    :aria-label="isEditMode ? '초대 취소' : '빼기'" :title="isEditMode ? '초대 취소' : '빼기'"
+                    @click="handleCancelInvite(invite)">
                     <template #icon>
                       <X class="remove-icon" />
                     </template>
@@ -195,7 +238,7 @@
 <script setup>
 import { ref, computed, watch, onUnmounted } from 'vue'
 import { useToast } from 'primevue/usetoast'
-import { User, Users, Calendar, Trash2, LogOut, Search, Info, X } from 'lucide-vue-next'
+import { User, Users, Calendar, Trash2, LogOut, Search, Info, X, Mail } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/authStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { userApi } from '@/api/userApi'
@@ -245,15 +288,17 @@ const activeTabIndex = ref(0)
 const isSubmitting = ref(false)
 
 // 멤버 관리
+const MEMBER_LIMIT = 5
 const members = ref([])
-const pendingMembers = ref([])
+const pendingMembers = ref([])  // 새 워크스페이스: 만든 뒤 보낼 초대 { key, userId?, email, nickname?, role }
+const invitations = ref([])     // 기존 워크스페이스: 서버의 대기 중인 초대
 
 // 검색
 const searchEmail = ref('')
 const searchResults = ref([])
 const showSearchResults = ref(false)
 const inviteRole = ref('MEMBER')
-const invitingUserId = ref(null)
+const invitingKey = ref(null)
 let searchTimeout = null
 
 // 삭제
@@ -275,11 +320,50 @@ const rolePriority = {
 }
 
 const memberList = computed(() => {
-  const list = isEditMode.value ? members.value : pendingMembers.value
-  return [...list].sort((a, b) => {
-    return (rolePriority[a.role] ?? 99) - (rolePriority[b.role] ?? 99)
-  })
+  return [...members.value].sort((a, b) => (rolePriority[a.role] ?? 99) - (rolePriority[b.role] ?? 99))
 })
+
+const inviteList = computed(() => {
+  if (!isEditMode.value) return pendingMembers.value
+  return invitations.value.map((i) => ({
+    key: `i${i.invitationId}`,
+    invitationId: i.invitationId,
+    userId: i.inviteeUserId,
+    nickname: i.inviteeNickname,
+    email: i.email,
+    role: i.role,
+    expiresAt: i.expiresAt,
+  }))
+})
+
+// 멤버 + 대기 중인 초대 (새 워크스페이스는 나 + 보낼 초대)
+const isFull = computed(() => {
+  const used = isEditMode.value ? members.value.length + invitations.value.length : 1 + pendingMembers.value.length
+  return used >= MEMBER_LIMIT
+})
+
+const isEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+// 입력한 것이 이메일이고, 검색 결과에 같은 사람이 없으면 "이메일로 초대" 항목을 보여준다
+const typedEmail = computed(() => {
+  const value = searchEmail.value.trim()
+  if (!isEmail(value)) return ''
+  const lower = value.toLowerCase()
+  if (inviteList.value.some((i) => i.email?.toLowerCase() === lower)) return ''
+  return value
+})
+
+function inviteSubtitle(invite) {
+  const parts = []
+  if (invite.nickname && invite.email) parts.push(invite.email)
+  if (invite.expiresAt) parts.push(expiresText(invite.expiresAt))
+  else if (!invite.userId) parts.push('만들면 초대 메일을 보내요')
+  return parts.join(' · ')
+}
+
+function expiresText(expiresAt) {
+  const days = Math.ceil((new Date(expiresAt) - Date.now()) / 86400000)
+  return days <= 1 ? '오늘 만료' : `${days}일 후 만료`
+}
 
 // visible 변경 시 초기화
 watch(() => props.visible, async (newVal) => {
@@ -300,6 +384,7 @@ watch(() => props.visible, async (newVal) => {
       workspaceName.value = ''
       workspaceDesc.value = ''
       pendingMembers.value = []
+      invitations.value = []
     }
   } else {
     document.removeEventListener('keydown', handleMainKeydown)
@@ -401,12 +486,20 @@ function canRemoveMember(member) {
 }
 
 async function loadMembers() {
-  if (!workspaceStore.currentWorkspaceId) return
+  const workspaceId = workspaceStore.currentWorkspaceId
+  if (!workspaceId) return
   try {
-    const data = await workspaceStore.loadMembers(workspaceStore.currentWorkspaceId)
-    members.value = data
+    members.value = await workspaceStore.loadMembers(workspaceId)
   } catch (error) {
     console.error('Failed to load members:', error)
+  }
+  invitations.value = []
+  if (workspaceStore.isAdmin && !isPersonalWorkspace.value) {
+    try {
+      invitations.value = await workspaceStore.loadInvitations(workspaceId)
+    } catch (error) {
+      console.error('Failed to load invitations:', error)
+    }
   }
 }
 
@@ -429,19 +522,24 @@ async function handleSubmit() {
         description: workspaceDesc.value.trim() || null
       })
 
-      if (pendingMembers.value.length > 0) {
-        for (const member of pendingMembers.value) {
-          try {
-            await workspaceStore.inviteMember(workspace.workspaceId, member.userId, member.role)
-          } catch (error) {
-            console.error(`Failed to invite ${member.nickname}:`, error)
-          }
+      let sent = 0
+      for (const invite of pendingMembers.value) {
+        try {
+          await workspaceStore.inviteMember(workspace.workspaceId, {
+            userId: invite.userId, email: invite.userId ? undefined : invite.email, role: invite.role,
+          })
+          sent++
+        } catch (error) {
+          console.error(`Failed to invite ${invite.nickname || invite.email}:`, error)
         }
-        await workspaceStore.loadWorkspaces()
       }
       emit('created', workspace)
       emit('update:visible', false)
-      toast.add({ severity: 'success', summary: '생성 완료', detail: '워크스페이스가 생성되었습니다.', life: 3000 })
+      toast.add({
+        severity: 'success', summary: '생성 완료',
+        detail: sent > 0 ? `워크스페이스를 만들고 초대 ${sent}건을 보냈어요.` : '워크스페이스가 생성되었습니다.',
+        life: 3000,
+      })
     }
   } catch (error) {
     console.error('Failed to submit:', error)
@@ -466,9 +564,11 @@ function handleSearchInput() {
     try {
       const response = await userApi.searchUsers(searchEmail.value)
 
-      const excludeIds = isEditMode.value
-        ? members.value.map(m => m.userId)
-        : [...pendingMembers.value.map(m => m.userId), authStore.userId]
+      const excludeIds = [
+        ...members.value.map(m => m.userId),
+        ...inviteList.value.map(i => i.userId).filter(Boolean),
+        authStore.userId,
+      ]
 
       searchResults.value = response.data.filter(user => !excludeIds.includes(user.userId))
     } catch (error) {
@@ -478,34 +578,58 @@ function handleSearchInput() {
   }, 300)
 }
 
-async function handleAddMember(user) {
-  if (isEditMode.value) {
-    // 멤버 제한 체크
-    if (members.value.length >= 5) {
-      toast.add({ severity: 'warn', summary: '제한 초과', detail: '워크스페이스 멤버는 최대 5명까지 초대할 수 있습니다.', life: 3000 })
-      return
-    }
-
-    try {
-      invitingUserId.value = user.userId
-      await workspaceStore.inviteMember(workspaceStore.currentWorkspaceId, user.userId, inviteRole.value)
-      searchResults.value = searchResults.value.filter(u => u.userId !== user.userId)
-      await loadMembers()
-      await workspaceStore.loadWorkspaces()
-      toast.add({ severity: 'success', summary: '초대 완료', detail: `${user.nickname || user.email}님을 초대했습니다.`, life: 3000 })
-    } catch (error) {
-      console.error('Failed to invite member:', error)
-      const errorMessage = error.response?.data?.message || '멤버 초대에 실패했습니다.'
-      toast.add({ severity: 'error', summary: '오류', detail: errorMessage, life: 3000 })
-    } finally {
-      invitingUserId.value = null
+// 초대 보내기 (새 워크스페이스는 목록에만 담아 두었다가 만든 뒤 보낸다)
+async function sendInvite({ userId, email, nickname }) {
+  if (isFull.value) {
+    toast.add({ severity: 'warn', summary: '인원 초과', detail: `멤버는 대기 중인 초대를 포함해 최대 ${MEMBER_LIMIT}명까지예요.`, life: 3000 })
+    return
+  }
+  const label = nickname || email
+  if (!isEditMode.value) {
+    const key = userId ? `u${userId}` : `e${email.toLowerCase()}`
+    if (!pendingMembers.value.find((m) => m.key === key)) {
+      pendingMembers.value.push({ key, userId, email, nickname, role: inviteRole.value })
     }
   } else {
-    if (pendingMembers.value.find(m => m.userId === user.userId)) return
-    pendingMembers.value.push({ ...user, role: inviteRole.value })
-    searchResults.value = searchResults.value.filter(u => u.userId !== user.userId)
-    searchEmail.value = ''
-    showSearchResults.value = false
+    try {
+      invitingKey.value = userId ? `u${userId}` : `e${email}`
+      await workspaceStore.inviteMember(workspaceStore.currentWorkspaceId, {
+        userId, email: userId ? undefined : email, role: inviteRole.value,
+      })
+      invitations.value = await workspaceStore.loadInvitations(workspaceStore.currentWorkspaceId)
+      toast.add({ severity: 'success', summary: '초대 보냄', detail: `${label}님에게 초대를 보냈어요. 수락하면 멤버가 돼요.`, life: 3000 })
+    } catch (error) {
+      console.error('Failed to invite:', error)
+      toast.add({ severity: 'error', summary: '초대 실패', detail: error.response?.data?.message || '초대를 보내지 못했습니다.', life: 3000 })
+      return
+    } finally {
+      invitingKey.value = null
+    }
+  }
+  searchResults.value = []
+  searchEmail.value = ''
+  showSearchResults.value = false
+}
+
+function handleAddMember(user) {
+  return sendInvite({ userId: user.userId, email: user.email, nickname: user.nickname })
+}
+
+function inviteTypedEmail() {
+  if (typedEmail.value) return sendInvite({ email: typedEmail.value })
+}
+
+async function handleCancelInvite(invite) {
+  if (!isEditMode.value) {
+    pendingMembers.value = pendingMembers.value.filter((m) => m.key !== invite.key)
+    return
+  }
+  try {
+    await workspaceStore.cancelInvitation(workspaceStore.currentWorkspaceId, invite.invitationId)
+    invitations.value = invitations.value.filter((i) => i.invitationId !== invite.invitationId)
+    toast.add({ severity: 'success', summary: '초대 취소', detail: `${invite.nickname || invite.email}님에게 보낸 초대를 취소했어요.`, life: 3000 })
+  } catch (error) {
+    toast.add({ severity: 'error', summary: '오류', detail: error.response?.data?.message || '초대를 취소하지 못했습니다.', life: 3000 })
   }
 }
 
@@ -519,9 +643,6 @@ async function handleUpdateRole(member, newRole) {
       console.error('Failed to update role:', error)
       toast.add({ severity: 'error', summary: '오류', detail: '권한 변경에 실패했습니다.', life: 3000 })
     }
-  } else {
-    const idx = pendingMembers.value.findIndex(m => m.userId === member.userId)
-    if (idx !== -1) pendingMembers.value[idx].role = newRole
   }
 }
 
@@ -537,8 +658,6 @@ async function handleRemoveMember(member) {
       console.error('Failed to remove member:', error)
       toast.add({ severity: 'error', summary: '오류', detail: '멤버 제거에 실패했습니다.', life: 3000 })
     }
-  } else {
-    pendingMembers.value = pendingMembers.value.filter(m => m.userId !== member.userId)
   }
 }
 
@@ -781,6 +900,39 @@ async function confirmLeaveWorkspace() {
 }
 
 /* 검색 섹션 */
+.invite-hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.75rem;
+  color: var(--text-color-secondary);
+}
+
+.email-avatar {
+  background: var(--surface-hover) !important;
+  color: var(--text-color-secondary);
+}
+
+.mail-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.me-tag {
+  margin-left: 0.25rem;
+  padding: 0 0.375rem;
+  border-radius: 4px;
+  font-size: 0.6875rem;
+  background: var(--surface-hover);
+  color: var(--text-color-secondary);
+}
+
+.member-card.pending .member-avatar {
+  opacity: 0.75;
+}
+
+.remove-btn.always {
+  opacity: 1 !important;
+}
+
 .search-section {
   position: relative;
   display: flex;

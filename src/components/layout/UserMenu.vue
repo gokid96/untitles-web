@@ -5,6 +5,7 @@
       <div class="user-avatar">
         <img v-if="userProfileImage" :src="userProfileImage" alt="프로필" class="avatar-img" />
         <span v-else>{{ userInitial }}</span>
+        <span v-if="invitationCount" class="invite-dot" :aria-label="`받은 초대 ${invitationCount}건`"></span>
       </div>
       <div class="user-info">
         <span class="user-nickname">{{ currentUser?.nickname }}</span>
@@ -16,6 +17,18 @@
     <!-- 팝업 메뉴 -->
     <Transition name="menu">
       <div v-if="isMenuOpen" class="popup-menu">
+        <!-- 받은 초대 -->
+        <template v-if="invitationCount">
+          <div class="menu-section">
+            <div class="menu-item invite-item" @click="openInvitations">
+              <Mail class="menu-icon" />
+              <span>받은 초대</span>
+              <span class="count-badge">{{ invitationCount }}</span>
+            </div>
+          </div>
+          <div class="menu-divider"></div>
+        </template>
+
         <!-- 워크스페이스 -->
         <div class="menu-section">
           <div class="section-label">워크스페이스</div>
@@ -82,6 +95,7 @@
 
     <!-- 모달 -->
     <ProfileModal v-model:visible="isProfileModalOpen" />
+    <InvitationsModal v-model:visible="isInvitationsOpen" @accepted="handleInvitationAccepted" />
     <WorkspaceModal
       v-model:visible="isWorkspaceModalOpen"
       :mode="workspaceModalMode"
@@ -93,10 +107,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
-import { ChevronUp, Users, User, Settings, Plus, Sun, Moon, LogOut } from 'lucide-vue-next'
+import { ChevronUp, Users, User, Settings, Plus, Sun, Moon, LogOut, Mail } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/authStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
@@ -104,6 +118,7 @@ import { useFolderStore } from '@/stores/folderStore'
 import { usePostStore } from '@/stores/postStore'
 import ProfileModal from '@/components/modals/ProfileModal.vue'
 import WorkspaceModal from '@/components/modals/WorkspaceModal.vue'
+import InvitationsModal from '@/components/modals/InvitationsModal.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -119,6 +134,46 @@ const isMenuOpen = ref(false)
 const isProfileModalOpen = ref(false)
 const isWorkspaceModalOpen = ref(false)
 const workspaceModalMode = ref('create')
+const isInvitationsOpen = ref(false)
+const invitationCount = computed(() => workspaceStore.myInvitations.length)
+
+function openInvitations() {
+  isInvitationsOpen.value = true
+  closeMenu()
+}
+
+async function handleInvitationAccepted(workspaceId) {
+  if (workspaceId) await handleSelectWorkspace(workspaceId)
+}
+
+// 새 초대가 오면 한 번 알려준다 (같은 초대로는 다시 열지 않음)
+const SEEN_KEY = 'untitles:seen-invitations'
+function readSeen() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(SEEN_KEY) || '[]'))
+  } catch {
+    return new Set()
+  }
+}
+watch(() => workspaceStore.myInvitations, (list) => {
+  const seen = readSeen()
+  const fresh = list.filter((i) => !seen.has(i.token))
+  if (fresh.length === 0) return
+  try {
+    localStorage.setItem(SEEN_KEY, JSON.stringify([...seen, ...fresh.map((i) => i.token)].slice(-50)))
+  } catch {
+    // 저장소를 못 쓰면 다음에 다시 알려줄 수 있음
+  }
+  isInvitationsOpen.value = true
+}, { immediate: true })
+
+// 다른 탭·앱에서 돌아오면 초대를 다시 확인 (1분에 한 번까지)
+let lastInvitationCheck = Date.now()
+function handleVisibility() {
+  if (document.visibilityState !== 'visible' || Date.now() - lastInvitationCheck < 60000) return
+  lastInvitationCheck = Date.now()
+  workspaceStore.loadMyInvitations()
+}
 
 const userInitial = computed(() => {
   return currentUser.value?.nickname?.charAt(0).toUpperCase() || 'U'
@@ -214,10 +269,12 @@ function handleClickOutside(event) {
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
+  document.addEventListener('visibilitychange', handleVisibility)
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
+  document.removeEventListener('visibilitychange', handleVisibility)
 })
 </script>
 
@@ -239,6 +296,30 @@ onUnmounted(() => {
   transition: background-color 0.15s;
 }
 
+.invite-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ef4444;
+  border: 2px solid var(--surface-card, #fff);
+}
+
+.count-badge {
+  margin-left: auto;
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+}
+
 .user-button:hover {
   background-color: var(--surface-hover);
 }
@@ -254,10 +335,11 @@ onUnmounted(() => {
   justify-content: center;
   font-weight: 600;
   font-size: 0.875rem;
-  overflow: hidden;
+  position: relative;
 }
 
 .user-avatar .avatar-img {
+  border-radius: 8px;
   width: 100%;
   height: 100%;
   object-fit: cover;

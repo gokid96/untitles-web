@@ -33,25 +33,46 @@ function fail(message) {
   router.replace('/login')
 }
 
+const providerNames = { KAKAO: '카카오', APPLE: 'Apple', GOOGLE: 'Google', NAVER: '네이버' }
+
+// 애플 웹 로그인·연결은 떠날 때 기억한 state와 돌아온 state가 같아야 한다 (위조 방지)
+function appleStateOk() {
+  if (route.query.provider !== 'apple') return true
+  let expected = null
+  try {
+    expected = sessionStorage.getItem(APPLE_STATE_KEY)
+    sessionStorage.removeItem(APPLE_STATE_KEY)
+  } catch {
+    expected = null
+  }
+  return !expected || route.query.state === expected
+}
+
+// 내 정보에서 소셜 계정 연결을 마치고 돌아온 경우 (이미 로그인한 상태)
+async function finishLink() {
+  const stateOk = appleStateOk()
+  if (route.query.error || !stateOk) {
+    toast.add({ severity: 'error', summary: '연결 실패', detail: route.query.error ? String(route.query.error) : '요청이 올바르지 않습니다. 다시 시도해주세요.', life: 6000 })
+  } else if (route.query.linked) {
+    const name = providerNames[String(route.query.linked)] || String(route.query.linked)
+    try {
+      await authStore.refreshUser()
+    } catch {
+      // 다음 새로고침 때 반영됨
+    }
+    toast.add({ severity: 'success', summary: '연결 완료', detail: `이제 ${name}로도 로그인할 수 있어요.`, life: 4000 })
+  }
+  router.replace('/')
+}
+
 onMounted(async () => {
+  if (route.query.mode === 'link' || route.query.linked) return finishLink()
   if (route.query.error) return fail(String(route.query.error))
 
   const code = route.query.code
   if (!code) return fail('로그인 정보를 받지 못했습니다. 다시 시도해주세요.')
 
-  // 애플 웹 로그인은 떠날 때 기억한 state와 돌아온 state가 같아야 한다 (위조된 로그인 방지)
-  if (route.query.provider === 'apple') {
-    let expected = null
-    try {
-      expected = sessionStorage.getItem(APPLE_STATE_KEY)
-      sessionStorage.removeItem(APPLE_STATE_KEY)
-    } catch {
-      expected = null
-    }
-    if (expected && route.query.state !== expected) {
-      return fail('로그인 요청이 올바르지 않습니다. 다시 시도해주세요.')
-    }
-  }
+  if (!appleStateOk()) return fail('로그인 요청이 올바르지 않습니다. 다시 시도해주세요.')
 
   try {
     const loginResponse = await exchangeLoginCode(String(code))
