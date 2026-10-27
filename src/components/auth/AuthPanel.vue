@@ -61,6 +61,10 @@
     <form v-else-if="step === 'password'" class="step" @submit.prevent="submitLogin">
       <h2 class="title">로그인</h2>
       <p class="subtitle identity">{{ email }}</p>
+      <div v-if="link" class="link-notice">
+        이미 이 이메일로 가입한 계정이 있어요.<br />
+        비밀번호로 로그인하면 <strong>{{ linkProviderName }}</strong> 계정이 연결되어, 다음부터 {{ linkProviderName }}로 바로 로그인할 수 있어요.
+      </div>
       <div class="form-group">
         <label for="auth-password">비밀번호</label>
         <input id="auth-password" ref="passwordInput" v-model="password" type="password" autocomplete="current-password" />
@@ -68,7 +72,7 @@
       <p v-if="error" class="error">{{ error }}</p>
       <button type="submit" class="submit-btn" :disabled="busy || !password">{{ busy ? '로그인 중...' : '로그인' }}</button>
       <button type="button" class="back-link" @click="isForgotOpen = true">비밀번호를 잊으셨나요?</button>
-      <button type="button" class="back-link" @click="step = 'email'">← 다른 이메일</button>
+      <button type="button" class="back-link" @click="changeEmail">← 다른 이메일</button>
     </form>
 
     <!-- 3b. 가입: 인증 코드 -->
@@ -107,25 +111,30 @@
       계속하면 <router-link to="/privacy" @click="$emit('navigate')">개인정보처리방침</router-link>에 동의하는 것으로 봅니다.
     </p>
 
-    <ForgotPasswordModal v-model:visible="isForgotOpen" />
+    <ForgotPasswordModal v-model:visible="isForgotOpen" :initial-email="email" />
   </div>
 </template>
 
 <script setup>
-import { ref, nextTick, watch } from 'vue'
+import { ref, computed, nextTick, watch, onMounted } from 'vue'
 import ForgotPasswordModal from '@/components/modals/ForgotPasswordModal.vue'
+import { useToast } from 'primevue/usetoast'
 import { useAuthStore } from '@/stores/authStore'
 import { usePostStore } from '@/stores/postStore'
 import { emailApi } from '@/api/emailApi'
+import { userApi } from '@/api/userApi'
 import { availableProviders, startSocialLogin } from '@/utils/socialAuth'
 import { getErrorMessage, restoreGuestDraft, isValidPassword, PASSWORD_RULE_TEXT } from '@/utils/helpers'
 
 const props = defineProps({
   // 'start'(소셜 + 이메일) | 'email'(바로 이메일 입력)
   initialStep: { type: String, default: 'start' },
+  // 웹 소셜 로그인이 기존 계정과 겹쳐 돌아온 연결 토큰 (/login?link=...)
+  linkToken: { type: String, default: '' },
 })
 const emit = defineEmits(['done', 'navigate'])
 
+const toast = useToast()
 const authStore = useAuthStore()
 const postStore = usePostStore()
 
@@ -141,6 +150,11 @@ const error = ref('')
 const busy = ref(false)
 const isForgotOpen = ref(false)
 
+// 소셜 로그인 이메일이 기존 계정과 겹친 경우: { token, provider } → 비밀번호로 로그인하면 연결
+const link = ref(null)
+const providerNames = { KAKAO: '카카오', APPLE: 'Apple', GOOGLE: 'Google', NAVER: '네이버' }
+const linkProviderName = computed(() => providerNames[link.value?.provider] || '소셜')
+
 const emailInput = ref(null)
 const passwordInput = ref(null)
 const codeInput = ref(null)
@@ -153,7 +167,32 @@ watch(step, async (value) => {
   focusTargets[value]?.value?.focus()
 })
 
+async function enterLinkMode({ linkToken, email: knownEmail, provider }) {
+  let target = knownEmail
+  let linkProvider = provider
+  if (!target) {
+    const { data } = await userApi.getPendingLink(linkToken)
+    target = data.email
+    linkProvider = data.provider
+  }
+  link.value = { token: linkToken, provider: linkProvider }
+  email.value = target || ''
+  password.value = ''
+  // 이메일을 모르면(예전 아이디 계정) 이메일 입력부터
+  step.value = target ? 'password' : 'email'
+}
+
+onMounted(() => {
+  if (props.linkToken) run(() => enterLinkMode({ linkToken: props.linkToken }))
+})
+
+function changeEmail() {
+  link.value = null
+  step.value = 'email'
+}
+
 function reset() {
+  link.value = null
   step.value = providers.length ? 'start' : 'email'
   password.value = ''
   code.value = ''
@@ -183,7 +222,13 @@ async function finish() {
 
 function social(provider) {
   return run(async () => {
-    const loginResponse = await startSocialLogin(provider)
+    let loginResponse
+    try {
+      loginResponse = await startSocialLogin(provider)
+    } catch (e) {
+      if (e?.linkRequired) return enterLinkMode(e)
+      throw e
+    }
     await authStore.completeLogin(loginResponse)
     await finish()
   })
@@ -220,7 +265,12 @@ function sendCode() {
 
 function submitLogin() {
   return run(async () => {
-    await authStore.login(email.value, password.value)
+    const linked = link.value
+    await authStore.login(email.value, password.value, linked?.token)
+    if (linked) {
+      toast.add({ severity: 'success', summary: '연결 완료', detail: `다음부터 ${linkProviderName.value}로도 로그인할 수 있어요.`, life: 4000 })
+      link.value = null
+    }
     await finish()
   })
 }
@@ -303,6 +353,17 @@ function submitSignup() {
 }
 .form-group input:focus { border-color: var(--primary-color); }
 .hint { font-size: 0.75rem; color: var(--text-color-secondary); }
+
+.link-notice {
+  padding: 0.75rem 0.875rem;
+  border-radius: 10px;
+  background: var(--surface-hover, rgba(127, 127, 127, 0.1));
+  border: 1px solid var(--surface-border);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--text-color);
+  word-break: keep-all;
+}
 
 .error { margin: 0; font-size: 0.8125rem; color: #ef4444; line-height: 1.5; word-break: keep-all; }
 

@@ -43,6 +43,26 @@ export function availableProviders() {
   return list
 }
 
+/**
+ * 소셜 계정의 이메일로 이미 가입한 계정이 있음 → 그 계정 비밀번호로 로그인하면 연결된다.
+ * 앱 로그인(409 응답)과 앱 카카오 로그인(돌아온 주소의 link) 모두 이 오류로 알린다.
+ */
+export class SocialLinkRequired extends Error {
+  constructor({ linkToken, email, provider }) {
+    super('이미 이 이메일로 가입한 계정이 있어요.')
+    this.linkRequired = true
+    this.linkToken = linkToken
+    this.email = email
+    this.provider = provider
+  }
+}
+
+/** 응답 오류가 연결 필요(409 + linkToken)면 SocialLinkRequired로 바꾼다 */
+function toLinkRequired(error) {
+  const data = error?.response?.status === 409 ? error.response.data?.data : null
+  return data?.linkToken ? new SocialLinkRequired(data) : error
+}
+
 export class SocialLoginCancelled extends Error {
   constructor() {
     super('로그인을 취소했습니다.')
@@ -141,7 +161,7 @@ async function loginNative(provider) {
     return response.data
   } catch (error) {
     if (isCancel(error)) throw new SocialLoginCancelled()
-    throw error
+    throw toLinkRequired(error)
   }
 }
 
@@ -175,6 +195,8 @@ async function loginWithBrowser(provider) {
       callbackReceived = true
       Browser.close().catch(() => {})
       const params = new URL(url.replace('net.untitles.app://', 'https://app.local/')).searchParams
+      const link = params.get('link')
+      if (link) return finish(reject, new SocialLinkRequired({ linkToken: link, provider: provider.toUpperCase() }))
       const error = params.get('error')
       if (error) return finish(reject, new Error(error))
       try {

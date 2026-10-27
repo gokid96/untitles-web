@@ -38,6 +38,11 @@ export const userApi = {
     return response
   },
 
+  // 소셜 로그인이 기존 계정과 겹쳤을 때 받은 연결 토큰의 정보 (이메일·제공자)
+  async getPendingLink(token) {
+    return apiClient.post('/auth/social/link', { token })
+  },
+
   async exchangeLoginCode(code) {
     const response = await apiClient.post('/auth/social/exchange', { code })
     response.data = transformLoginResponse(response.data)
@@ -61,8 +66,8 @@ export const userApi = {
     return apiClient.post('/auth/password-reset/confirm', { email, code, newPassword })
   },
 
-  async login(loginId, password) {
-    const response = await apiClient.post('/auth/login', { loginId, password })
+  async login(loginId, password, linkToken) {
+    const response = await apiClient.post('/auth/login', { loginId, password, linkToken: linkToken || undefined })
     response.data = transformLoginResponse(response.data)
     return response
   },

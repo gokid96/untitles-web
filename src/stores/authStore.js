@@ -55,8 +55,9 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   // 로그인 (이메일 또는 아이디)
-  async function login(loginId, password) {
-    const response = await userApi.login(loginId, password)
+  // linkToken: 소셜 로그인이 이 계정과 겹쳐 받은 연결 토큰 (있으면 로그인하면서 소셜 계정을 연결)
+  async function login(loginId, password, linkToken) {
+    const response = await userApi.login(loginId, password, linkToken)
     await completeLogin(response.data)
     return response.data
   }

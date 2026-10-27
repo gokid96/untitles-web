@@ -41,6 +41,7 @@ import { getErrorMessage, isValidPassword, PASSWORD_RULE_TEXT } from '@/utils/he
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
+  initialEmail: { type: String, default: '' },
 })
 const emit = defineEmits(['update:visible'])
 
@@ -57,6 +58,7 @@ watch(
   (open) => {
     if (open) {
       step.value = 'request'
+      if (props.initialEmail && props.initialEmail.includes('@')) email.value = props.initialEmail
       code.value = ''
       newPassword.value = ''
       confirmPassword.value = ''

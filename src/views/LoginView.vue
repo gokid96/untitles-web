@@ -1,14 +1,14 @@
 <template>
   <div class="login-view">
     <div class="login-card">
-      <AuthPanel :initial-step="initialStep" @done="goNext" />
+      <AuthPanel :initial-step="initialStep" :link-token="linkToken" @done="goNext" />
       <router-link to="/" class="back-home">← 둘러보기로 돌아가기</router-link>
     </div>
   </div>
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import AuthPanel from '@/components/auth/AuthPanel.vue'
@@ -21,8 +21,12 @@ const route = useRoute()
 const router = useRouter()
 const toast = useToast()
 
+// 웹 소셜 로그인이 같은 이메일의 기존 계정과 겹치면 ?link=연결토큰 으로 돌아온다
+const linkToken = ref(typeof route.query.link === 'string' ? route.query.link : '')
+
 // 웹 리다이렉트 소셜 로그인이 실패하면 ?error=메시지 로 돌아온다
 onMounted(() => {
+  if (linkToken.value) router.replace({ path: route.path, query: {} })
   const error = route.query.error
   if (error) {
     toast.add({ severity: 'error', summary: '로그인 실패', detail: String(error), life: 6000 })
