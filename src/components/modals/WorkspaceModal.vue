@@ -238,7 +238,8 @@
 <script setup>
 import { ref, computed, watch, onUnmounted } from 'vue'
 import { useToast } from 'primevue/usetoast'
-import { User, Users, Calendar, Trash2, LogOut, Search, Info, X, Mail } from 'lucide-vue-next'
+import { User, Users, Calendar, Trash2, LogOut, Search, Info, X, Mail, UserMinus } from 'lucide-vue-next'
+import { askConfirm } from '@/utils/confirm'
 import { useAuthStore } from '@/stores/authStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { userApi } from '@/api/userApi'
@@ -648,7 +649,13 @@ async function handleUpdateRole(member, newRole) {
 
 async function handleRemoveMember(member) {
   if (isEditMode.value) {
-    if (!confirm(`${member.nickname || member.email}님을 제거하시겠습니까?`)) return
+    const ok = await askConfirm({
+      title: '멤버 내보내기',
+      message: `${member.nickname || member.email}님을 이 워크스페이스에서 내보낼까요?\n다시 참여하려면 새로 초대해야 해요.`,
+      confirmLabel: '내보내기',
+      icon: UserMinus,
+    })
+    if (!ok) return
     try {
       await workspaceStore.removeMember(workspaceStore.currentWorkspaceId, member.memberId)
       await loadMembers()
@@ -687,7 +694,13 @@ async function handleDeleteWorkspace() {
 }
 
 async function confirmLeaveWorkspace() {
-  if (!confirm('정말로 이 워크스페이스를 나가시겠습니까?')) return
+  const ok = await askConfirm({
+    title: '워크스페이스 나가기',
+    message: `${workspaceStore.currentWorkspace?.name || '이 워크스페이스'}에서 나갈까요?\n다시 참여하려면 초대를 받아야 해요.`,
+    confirmLabel: '나가기',
+    icon: LogOut,
+  })
+  if (!ok) return
 
   try {
     await workspaceStore.leaveWorkspace(workspaceStore.currentWorkspaceId)

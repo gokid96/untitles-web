@@ -162,7 +162,8 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useToast } from 'primevue/usetoast'
-import { Camera, Loader2 } from 'lucide-vue-next'
+import { Camera, Loader2, Unlink } from 'lucide-vue-next'
+import { askConfirm } from '@/utils/confirm'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
@@ -409,7 +410,14 @@ async function link(provider) {
 }
 
 async function unlink(provider) {
-  if (!confirm(`${providerName[provider] || provider} 연결을 해제할까요? 해제하면 이 방법으로는 로그인할 수 없어요.`)) return
+  const name = providerName[provider] || provider
+  const ok = await askConfirm({
+    title: `${name} 연결 해제`,
+    message: `${name} 연결을 해제할까요?\n해제하면 ${name}로는 로그인할 수 없어요.`,
+    confirmLabel: '해제',
+    icon: Unlink,
+  })
+  if (!ok) return
   busyProvider.value = provider
   try {
     await userApi.unlinkSocial(provider.toLowerCase())

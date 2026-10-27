@@ -6,6 +6,18 @@
     <!-- 글로벌 컴포넌트: 필요할 때만 렌더링 -->
     <SessionExpiredModal v-if="isSessionExpired" />
     <GlobalErrorToast v-if="globalError" />
+    <ConfirmDialog
+      v-if="confirmState.visible"
+      :visible="confirmState.visible"
+      :title="confirmState.title"
+      :message="confirmState.message"
+      :confirm-label="confirmState.confirmLabel"
+      :cancel-label="confirmState.cancelLabel"
+      :variant="confirmState.variant"
+      :icon="confirmState.icon"
+      @confirm="resolveConfirm(true)"
+      @cancel="resolveConfirm(false)"
+    />
     <AuthModal
       :visible="uiStore.authModalVisible"
       :initial-mode="uiStore.authModalMode"
@@ -20,6 +32,9 @@ import Toast from 'primevue/toast'
 import { useUiStore } from '@/stores/uiStore'
 import { useAppStore } from '@/stores/appStore'
 import AuthModal from '@/components/modals/AuthModal.vue'
+import { confirmState, resolveConfirm } from '@/utils/confirm'
+
+const ConfirmDialog = defineAsyncComponent(() => import('@/components/common/ConfirmDialog.vue'))
 
 // 글로벌 모달 lazy loading
 const SessionExpiredModal = defineAsyncComponent(() =>

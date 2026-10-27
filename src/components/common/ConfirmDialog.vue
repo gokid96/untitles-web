@@ -3,17 +3,18 @@
     <Transition name="modal">
       <div v-if="visible" class="modal-overlay" @click.self="handleCancel">
         <div class="modal-container">
-          <div class="modal-icon">
-            <Trash2 class="icon" />
+          <div class="modal-icon" :class="variant">
+            <component :is="icon || Trash2" class="icon" />
           </div>
-          <h3 class="modal-title">삭제 확인</h3>
+          <h3 class="modal-title">{{ title }}</h3>
           <p class="modal-message">{{ message }}</p>
           <div class="modal-actions">
             <button class="btn btn-secondary" @click="handleCancel">
-              취소
+              {{ cancelLabel }}
             </button>
-            <button ref="confirmBtnRef" class="btn btn-danger" @click="handleConfirm">
-              삭제
+            <button ref="confirmBtnRef" class="btn" :class="variant === 'danger' ? 'btn-danger' : 'btn-primary'"
+              @click="handleConfirm">
+              {{ confirmLabel }}
             </button>
           </div>
         </div>
@@ -35,9 +36,15 @@ const props = defineProps({
     type: String,
     default: '정말 삭제하시겠습니까?',
   },
+  title: { type: String, default: '삭제 확인' },
+  confirmLabel: { type: String, default: '삭제' },
+  cancelLabel: { type: String, default: '취소' },
+  // danger(빨강) | primary
+  variant: { type: String, default: 'danger' },
+  icon: { type: [Object, Function], default: null },
 })
 
-const emit = defineEmits(['update:visible', 'confirm'])
+const emit = defineEmits(['update:visible', 'confirm', 'cancel'])
 
 const confirmBtnRef = ref(null)
 
@@ -47,6 +54,7 @@ function handleConfirm() {
 }
 
 function handleCancel() {
+  emit('cancel')
   emit('update:visible', false)
 }
 
@@ -54,29 +62,32 @@ function handleCancel() {
 function handleKeydown(e) {
   if (!props.visible) return
   
+  // 아래에 열린 다른 창(워크스페이스 설정 등)이 같은 키로 닫히지 않도록 여기서 멈춘다
   if (e.key === 'Escape') {
     e.preventDefault()
+    e.stopImmediatePropagation()
     handleCancel()
   } else if (e.key === 'Enter') {
     e.preventDefault()
+    e.stopImmediatePropagation()
     handleConfirm()
   }
 }
 
 watch(() => props.visible, (visible) => {
   if (visible) {
-    document.addEventListener('keydown', handleKeydown)
-    // 모달이 열리면 삭제 버튼에 포커스
+    window.addEventListener('keydown', handleKeydown, true)
+    // 모달이 열리면 확인 버튼에 포커스
     nextTick(() => {
       confirmBtnRef.value?.focus()
     })
   } else {
-    document.removeEventListener('keydown', handleKeydown)
+    window.removeEventListener('keydown', handleKeydown, true)
   }
 }, { immediate: true })
 
 onUnmounted(() => {
-  document.removeEventListener('keydown', handleKeydown)
+  window.removeEventListener('keydown', handleKeydown, true)
 })
 </script>
 
@@ -116,6 +127,14 @@ onUnmounted(() => {
 
 .dark-mode .modal-icon {
   background: rgba(239, 68, 68, 0.2);
+}
+
+.modal-icon.primary {
+  background: var(--surface-hover);
+}
+
+.modal-icon.primary .icon {
+  color: var(--text-color);
 }
 
 .modal-icon .icon {
@@ -171,6 +190,15 @@ onUnmounted(() => {
 
 .btn-danger:hover {
   background: #dc2626;
+}
+
+.btn-primary {
+  background: var(--primary-color);
+  color: var(--primary-color-text);
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
 }
 
 /* 트랜지션 */
