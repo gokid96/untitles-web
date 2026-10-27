@@ -20,8 +20,11 @@
     "@capacitor/app": "^8.1.2",
     "@capacitor/core": "^8.5.3",
     "@capacitor/status-bar": "^8.0.4",
+    "@hocuspocus/provider": "4.6.0",
     "@primeuix/themes": "^1.2.5",
     "@tiptap/extension-code-block-lowlight": "^3.13.0",
+    "@tiptap/extension-collaboration": "3.16.0",
+    "@tiptap/extension-collaboration-caret": "3.16.0",
     "@tiptap/extension-highlight": "^3.16.0",
     "@tiptap/extension-image": "^3.16.0",
     "@tiptap/extension-link": "^3.16.0",
@@ -37,6 +40,7 @@
     "@tiptap/starter-kit": "^3.13.0",
     "@tiptap/suggestion": "^3.16.0",
     "@tiptap/vue-3": "^3.13.0",
+    "@tiptap/y-tiptap": "3.0.10",
     "axios": "^1.13.2",
     "force-graph": "^1.52.0",
     "lowlight": "^3.3.0",
@@ -47,7 +51,9 @@
     "primevue": "^4.4.1",
     "turndown": "^7.2.2",
     "vue": "^3.5.22",
-    "vue-router": "^4.6.3"
+    "vue-router": "^4.6.3",
+    "y-protocols": "1.0.6",
+    "yjs": "13.6.27"
   },
   "devDependencies": {
     "@capacitor/android": "^8.5.3",

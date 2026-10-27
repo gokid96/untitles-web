@@ -36,7 +36,7 @@ async function tokenRotatedByOtherTab(usedRefreshToken) {
   return null
 }
 
-function refreshAccessToken() {
+export function refreshAccessToken() {
   if (!refreshPromise) {
     const refreshToken = localStorage.getItem('refreshToken')
     refreshPromise = (refreshToken
