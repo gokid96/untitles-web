@@ -120,6 +120,7 @@ export function useWorkspaceLive() {
     if (!COLLAB_URL || !workspaceId || !authStore.isAuthenticated) return
     ydoc = new Y.Doc()
     let refreshing = false
+    let lastAuthRetry = 0
     const current = new HocuspocusProvider({
       url: COLLAB_URL,
       name: `workspace:${workspaceId}`,
@@ -133,7 +134,12 @@ export function useWorkspaceLive() {
         if (connected && !wasConnected && Date.now() - lastTreeLoad > 2000) reloadTree(true)
       },
       onAuthenticationFailed: async () => {
-        if (refreshing || provider !== current) return
+        // 토큰 만료면 새로 받아 다시 연결. 권한이 없어진 경우 무한히 재시도하지 않도록 30초에 한 번만
+        if (refreshing || provider !== current || Date.now() - lastAuthRetry < 30_000) {
+          if (provider === current) current.disconnect()
+          return
+        }
+        lastAuthRetry = Date.now()
         refreshing = true
         try {
           await refreshAccessToken()

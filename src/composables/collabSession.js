@@ -29,11 +29,14 @@ export function createCollabSession({ workspaceId, postId, getToken, refreshToke
   const unsynced = ref(0)
   const readOnly = ref(false)
   const authFailed = ref(false)
+  // 편집 서버가 DB 저장에 실패하고 있음: null | 'too-large' | 'failed'
+  const storeError = ref(null)
   const peers = ref([]) // 같은 노트를 보고 있는 다른 사람 [{ clientId, name, color }]
 
   let refreshing = false
   let destroyed = false
   let connectFailed = false
+  let lastAuthRetry = 0
 
   const provider = new HocuspocusProvider({
     url: COLLAB_URL,
@@ -57,8 +60,13 @@ export function createCollabSession({ workspaceId, postId, getToken, refreshToke
       readOnly.value = data?.scope === 'readonly'
     },
     onAuthenticationFailed: async () => {
-      // 액세스 토큰이 만료됐을 수 있다: 한 번 새로 받아서 다시 연결
-      if (refreshing || destroyed) return
+      // 액세스 토큰이 만료됐을 수 있다: 한 번 새로 받아서 다시 연결.
+      // 권한이 없어서(멤버에서 빠짐 등) 실패한 거라면 계속 재시도하지 않도록 30초에 한 번만
+      if (refreshing || destroyed || Date.now() - lastAuthRetry < 30_000) {
+        authFailed.value = true
+        return
+      }
+      lastAuthRetry = Date.now()
       refreshing = true
       try {
         if (await refreshToken()) {
@@ -72,6 +80,15 @@ export function createCollabSession({ workspaceId, postId, getToken, refreshToke
         refreshing = false
       }
       authFailed.value = true
+    },
+    onStateless: ({ payload }) => {
+      try {
+        const message = JSON.parse(payload)
+        if (message?.type === 'store-error') storeError.value = message.reason || 'failed'
+        else if (message?.type === 'store-ok') storeError.value = null
+      } catch {
+        // 모르는 메시지는 무시
+      }
     },
     onAwarenessUpdate: ({ states }) => {
       const me = ydoc.clientID
@@ -163,6 +180,7 @@ export function createCollabSession({ workspaceId, postId, getToken, refreshToke
     unsynced,
     readOnly,
     authFailed,
+    storeError,
     peers,
     waitForSync,
     setTitle,

@@ -16,7 +16,8 @@
         </div>
         <span v-if="isReadOnly" class="readonly-badge">읽기 전용</span>
         <div v-if="authStore.isAuthenticated" class="save-indicator"
-          :class="{ saving: showSaving || isConnecting, unsaved: (hasUnsavedChanges && !showSaving) || collabOffline }">
+          :class="{ saving: showSaving || isConnecting, unsaved: (hasUnsavedChanges && !showSaving) || collabOffline, error: !!collabStoreError }"
+          :title="collabStoreError ? '편집 내용은 함께 편집 중인 화면에는 남아 있지만 서버에 저장되지 않고 있어요' : undefined">
           <Loader2 v-if="showSaving || isConnecting" class="indicator-icon spinning" />
           <Circle v-else-if="hasUnsavedChanges" class="indicator-icon unsaved-dot" />
           <Check v-else class="indicator-icon" />
@@ -225,8 +226,13 @@ const showSaving = computed(() =>
   isSaving.value || (collabMode.value && !collabOffline.value && hasUnsavedChanges.value))
 
 // 저장 상태 표시
+// 실시간 편집 중 서버가 DB 저장에 실패하고 있으면
+const collabStoreError = computed(() => (collabMode.value ? collab.value?.storeError.value : null) || null)
+
 const saveIndicatorText = computed(() => {
   if (isConnecting.value) return '불러오는 중'
+  if (collabStoreError.value === 'too-large') return '저장 실패 · 노트가 너무 커요'
+  if (collabStoreError.value) return '저장 실패 · 다시 시도 중'
   if (collabOffline.value) return hasUnsavedChanges.value ? '오프라인 · 연결되면 저장' : '오프라인'
   if (showSaving.value) return '저장 중'
   if (hasUnsavedChanges.value) return '저장되지 않음'
@@ -1110,6 +1116,10 @@ onBeforeUnmount(() => {
   font-size: 0.8125rem;
   color: var(--text-color-secondary);
   transition: all 0.2s;
+}
+
+.save-indicator.error {
+  color: #ef4444;
 }
 
 .save-indicator.saving {

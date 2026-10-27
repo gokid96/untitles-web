@@ -80,8 +80,8 @@ export async function startSocialLogin(provider) {
     if (provider === 'apple' || provider === 'google') return loginNative(provider)
   } else {
     if (provider === 'apple') return loginWithAppleRedirect()
-    // 카카오·구글: 서버 리다이렉트 (끝나면 /oauth/callback?code=...)
-    window.location.href = `${OAUTH_BASE_URL}/oauth2/authorization/${provider}`
+    // 카카오·구글: 서버 리다이렉트 (끝나면 /oauth/callback?code=...&state=...)
+    window.location.href = `${OAUTH_BASE_URL}/oauth2/authorization/${provider}?client_state=${rememberOAuthState()}`
     return new Promise(() => {})
   }
   throw new Error('지원하지 않는 로그인 방법입니다.')
@@ -231,6 +231,21 @@ async function openAppBrowser(url, handle) {
 // ===== 웹: 애플 (애플 로그인 페이지로 이동 → 우리 서버가 결과를 받아 /oauth/callback 으로) =====
 
 export const APPLE_STATE_KEY = 'untitles:apple-state'
+export const OAUTH_STATE_KEY = 'untitles:oauth-state'
+
+/**
+ * 웹 소셜 로그인(카카오·구글)을 시작할 때 무작위 값을 기억해 두고 서버를 거쳐 돌려받는다.
+ * 돌아온 값이 다르거나 없으면 이 탭에서 시작한 로그인이 아니므로 거부한다 (남의 계정으로 로그인시키는 위조 방지)
+ */
+function rememberOAuthState() {
+  const state = randomNonce()
+  try {
+    sessionStorage.setItem(OAUTH_STATE_KEY, state)
+  } catch {
+    // 저장소를 못 쓰면 돌아왔을 때 확인에 실패해 다시 시도하게 된다
+  }
+  return state
+}
 
 function loginWithAppleRedirect(linkIntent) {
   // 위조된 로그인 결과를 막기 위해 무작위 state를 기억해 두고, 돌아왔을 때 같은지 확인한다.
@@ -273,7 +288,7 @@ export async function startSocialLink(provider) {
     })
   }
   if (provider === 'apple') return loginWithAppleRedirect(intent)
-  window.location.href = `${OAUTH_BASE_URL}/oauth2/authorization/${provider}?link=${intent}`
+  window.location.href = `${OAUTH_BASE_URL}/oauth2/authorization/${provider}?link=${intent}&client_state=${rememberOAuthState()}`
   return new Promise(() => {})
 }
 

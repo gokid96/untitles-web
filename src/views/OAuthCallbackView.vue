@@ -13,7 +13,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import { usePostStore } from '@/stores/postStore'
 import { restoreGuestDraft, getErrorMessage } from '@/utils/helpers'
-import { exchangeLoginCode, APPLE_STATE_KEY } from '@/utils/socialAuth'
+import { exchangeLoginCode, APPLE_STATE_KEY, OAUTH_STATE_KEY } from '@/utils/socialAuth'
 import { useToast } from 'primevue/usetoast'
 
 /**
@@ -35,23 +35,24 @@ function fail(message) {
 
 const providerNames = { KAKAO: '카카오', APPLE: 'Apple', GOOGLE: 'Google', NAVER: '네이버' }
 
-// 애플 웹 로그인·연결은 떠날 때 기억한 state와 돌아온 state가 같아야 한다 (위조 방지)
-function appleStateOk() {
-  if (route.query.provider !== 'apple') return true
+// 로그인·연결은 이 탭에서 떠날 때 기억한 state와 돌아온 state가 같아야 한다.
+// 남이 만든 로그인 주소(자기 계정의 일회용 코드)를 눌러 그 사람 계정으로 로그인되는 위조를 막는다
+function stateOk() {
+  const key = route.query.provider === 'apple' ? APPLE_STATE_KEY : OAUTH_STATE_KEY
   let expected = null
   try {
-    expected = sessionStorage.getItem(APPLE_STATE_KEY)
-    sessionStorage.removeItem(APPLE_STATE_KEY)
+    expected = sessionStorage.getItem(key)
+    sessionStorage.removeItem(key)
   } catch {
     expected = null
   }
-  return !expected || route.query.state === expected
+  return !!expected && route.query.state === expected
 }
 
 // 내 정보에서 소셜 계정 연결을 마치고 돌아온 경우 (이미 로그인한 상태)
 async function finishLink() {
-  const stateOk = appleStateOk()
-  if (route.query.error || !stateOk) {
+  const valid = route.query.error ? true : stateOk()
+  if (route.query.error || !valid) {
     toast.add({ severity: 'error', summary: '연결 실패', detail: route.query.error ? String(route.query.error) : '요청이 올바르지 않습니다. 다시 시도해주세요.', life: 6000 })
   } else if (route.query.linked) {
     const name = providerNames[String(route.query.linked)] || String(route.query.linked)
@@ -72,7 +73,7 @@ onMounted(async () => {
   const code = route.query.code
   if (!code) return fail('로그인 정보를 받지 못했습니다. 다시 시도해주세요.')
 
-  if (!appleStateOk()) return fail('로그인 요청이 올바르지 않습니다. 다시 시도해주세요.')
+  if (!stateOk()) return fail('로그인 요청이 올바르지 않습니다. 다시 시도해주세요.')
 
   try {
     const loginResponse = await exchangeLoginCode(String(code))
