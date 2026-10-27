@@ -95,6 +95,8 @@ export async function exchangeLoginCode(code) {
 
 // ===== 앱: 애플·구글 (앱 안 로그인 창) =====
 
+// 주의: Capacitor 플러그인 객체를 Promise 결과로 그대로 돌려주면 then이 있는 것으로 취급되어 영원히 기다린다.
+// 그래서 { plugin }으로 감싸서 보관한다.
 let pluginPromise = null
 function getSocialLogin() {
   if (!pluginPromise) {
@@ -110,7 +112,7 @@ function getSocialLogin() {
         }
       }
       await SocialLogin.initialize(options)
-      return SocialLogin
+      return { plugin: SocialLogin }
     })
     pluginPromise.catch(() => {
       pluginPromise = null
@@ -137,7 +139,7 @@ function isCancel(error) {
 
 // 앱 안 로그인 창으로 제공자의 증명(ID 토큰 등)을 받는다
 async function nativeCredential(provider) {
-  const SocialLogin = await getSocialLogin()
+  const { plugin: SocialLogin } = await getSocialLogin()
   try {
     if (provider === 'apple') {
       // 애플은 nonce의 해시를 토큰에 넣는다. 서버는 원문으로 해시를 다시 계산해 확인한다

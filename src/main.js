@@ -58,10 +58,18 @@ app.use(ToastService)
 
 // 스토어 앱: 휴대폰 보안 저장소의 로그인 정보를 먼저 되살린 뒤 화면을 띄운다
 if (isNativeApp) {
+  // 저장된 로그인 정보를 되살린 뒤 화면을 그린다. 어떤 이유로든 늦어지면 2초 뒤에는 무조건 그린다
+  let mounted = false
+  const mount = () => {
+    if (mounted) return
+    mounted = true
+    app.mount('#app')
+  }
+  setTimeout(mount, 2000)
   import('./utils/tokenStore')
     .then(({ restoreTokens }) => restoreTokens())
     .catch(() => {})
-    .finally(() => app.mount('#app'))
+    .finally(mount)
 } else {
   app.mount('#app')
 }

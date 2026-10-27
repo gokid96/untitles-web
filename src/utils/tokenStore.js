@@ -9,15 +9,23 @@ import { isNativeApp } from './platform'
  */
 const KEYS = ['accessToken', 'refreshToken']
 
+// 주의: Capacitor 플러그인 객체는 어떤 속성이든 응답하므로(then 포함) Promise 결과로 그대로 돌려주면
+// "아직 안 끝난 작업"으로 취급되어 영원히 기다리게 된다. 반드시 다른 객체로 감싸서 돌려준다.
+// async 함수의 반환값도 마찬가지라, { storage } 상태로 넘기고 쓰는 곳에서 꺼낸다.
 let securePromise = null
 function getSecureStorage() {
-  if (!isNativeApp) return Promise.resolve(null)
+  if (!isNativeApp) return Promise.resolve({ storage: null })
   if (!securePromise) {
     securePromise = import('@aparajita/capacitor-secure-storage')
-      .then((m) => m.SecureStorage)
-      .catch(() => null)
+      .then((m) => ({ storage: m.SecureStorage }))
+      .catch(() => ({ storage: null }))
   }
   return securePromise
+}
+
+/** 일정 시간 안에 끝나지 않으면 기다리지 않는다 (앱 시작이 저장소 때문에 멈추지 않게) */
+function withTimeout(promise, ms) {
+  return Promise.race([promise, new Promise((resolve) => setTimeout(() => resolve(undefined), ms))])
 }
 
 function safeLocal(fn) {
@@ -33,7 +41,7 @@ let writeChain = Promise.resolve()
 function persist() {
   const snapshot = Object.fromEntries(KEYS.map((key) => [key, safeLocal(() => localStorage.getItem(key))]))
   writeChain = writeChain.then(async () => {
-    const storage = await getSecureStorage()
+    const { storage } = await getSecureStorage()
     if (!storage) return
     for (const key of KEYS) {
       try {
@@ -62,12 +70,12 @@ export function clearTokens() {
 
 /** 앱 시작 시 한 번: 웹뷰 저장소가 비었으면 보안 저장소의 토큰을 되살린다 */
 export async function restoreTokens() {
-  const storage = await getSecureStorage()
+  const { storage } = (await withTimeout(getSecureStorage(), 1500)) || {}
   if (!storage) return
   for (const key of KEYS) {
     if (safeLocal(() => localStorage.getItem(key))) continue
     try {
-      const value = await storage.getItem(key)
+      const value = await withTimeout(storage.getItem(key), 1500)
       if (value) safeLocal(() => localStorage.setItem(key, value))
     } catch {
       // 무시
