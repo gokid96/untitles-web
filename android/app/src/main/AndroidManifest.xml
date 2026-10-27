@@ -18,6 +18,13 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- 카카오 등 웹 방식 소셜 로그인을 마치고 앱으로 돌아오는 주소: net.untitles.app://oauth/callback -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="net.untitles.app" android:host="oauth" />
+            </intent-filter>
         </activity>
 
         <provider

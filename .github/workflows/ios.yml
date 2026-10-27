@@ -74,20 +74,30 @@ jobs:
           mkdir -p "$RUNNER_TEMP/keys"
           printf '%s\n' "$ASC_KEY_P8" > "$RUNNER_TEMP/keys/AuthKey_$ASC_KEY_ID.p8"
 
-      - name: 아카이브 (서명 없이, 빌드 번호 = 실행 번호)
+      - name: 아카이브 (임시 서명, 빌드 번호 = 실행 번호)
         # 등록된 기기가 없으면 아카이브 단계의 자동 서명(개발용 프로필)이 실패하므로
-        # 아카이브는 서명 없이 만들고, 내보내기 단계에서 배포용 인증서·프로필로 서명한다.
+        # 아카이브는 임시(ad-hoc "-") 서명으로 만들고, 내보내기 단계에서 배포용 인증서·프로필로 다시 서명한다.
+        # 완전히 서명을 끄면 권한(entitlements, 예: Sign in with Apple)이 앱에 들어가지 않아 내보낼 때 빠진다.
         if: env.UPLOAD == 'true'
-        env:
-          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -o pipefail
           xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/App.xcarchive" archive \
-            DEVELOPMENT_TEAM="$TEAM_ID" \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="-" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
+            CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=YES \
             CURRENT_PROJECT_VERSION="${{ github.run_number }}" | tail -n 40
+
+      - name: 앱 권한 확인 (Sign in with Apple)
+        if: env.UPLOAD == 'true'
+        run: |
+          APP="$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app"
+          codesign -d --entitlements - --xml "$APP" > "$RUNNER_TEMP/entitlements.plist" 2>/dev/null || true
+          cat "$RUNNER_TEMP/entitlements.plist"; echo
+          if ! grep -q "com.apple.developer.applesignin" "$RUNNER_TEMP/entitlements.plist"; then
+            echo "::error::아카이브에 Sign in with Apple 권한이 없습니다 (애플 로그인이 동작하지 않음)."
+            exit 1
+          fi
 
       - name: App Store Connect 업로드
         if: env.UPLOAD == 'true'
