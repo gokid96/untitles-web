@@ -14,6 +14,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   // 나에게 온 대기 중인 초대
   const myInvitations = ref([])
 
+  // 멤버 구성이 바뀔 때마다 올라간다 (열려 있는 멤버 목록이 다시 불러오게)
+  const membersVersion = ref(0)
+
   // 현재 워크스페이스
   const currentWorkspace = computed(() => {
     return workspaces.value.find(w => w.workspaceId === currentWorkspaceId.value) || null
@@ -244,6 +247,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     currentWorkspaceId,
     workspaceLimit,
     myInvitations,
+    membersVersion,
     // computed
     currentWorkspace,
     myRole,

@@ -108,5 +108,5 @@ export const useGraphStore = defineStore('graph', () => {
     }
   }
 
-  return { nodes, links, isLoading, load, titleOf, backlinksOf, outgoingOf, localGraph }
+  return { nodes, links, isLoading, load, refresh, titleOf, backlinksOf, outgoingOf, localGraph }
 })

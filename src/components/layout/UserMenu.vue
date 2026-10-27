@@ -3,8 +3,7 @@
     <!-- 사용자 버튼 -->
     <div class="user-button" @click="toggleMenu">
       <div class="user-avatar">
-        <img v-if="userProfileImage" :src="userProfileImage" alt="프로필" class="avatar-img" />
-        <span v-else>{{ userInitial }}</span>
+        <UserAvatar :user-id="authStore.userId" :name="currentUser?.nickname" :image="userProfileImage" :size="32" />
         <span v-if="invitationCount" class="invite-dot" :aria-label="`받은 초대 ${invitationCount}건`"></span>
       </div>
       <div class="user-info">
@@ -119,6 +118,7 @@ import { usePostStore } from '@/stores/postStore'
 import ProfileModal from '@/components/modals/ProfileModal.vue'
 import WorkspaceModal from '@/components/modals/WorkspaceModal.vue'
 import InvitationsModal from '@/components/modals/InvitationsModal.vue'
+import UserAvatar from '@/components/common/UserAvatar.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -328,13 +328,9 @@ onUnmounted(() => {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-700) 100%);
-  color: var(--primary-color-text);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 600;
-  font-size: 0.875rem;
   position: relative;
 }
 
@@ -345,10 +341,6 @@ onUnmounted(() => {
   object-fit: cover;
 }
 
-.dark-mode .user-avatar {
-  background: linear-gradient(135deg, var(--primary-300) 0%, var(--primary-400) 100%);
-  color: var(--surface-ground);
-}
 
 .user-info {
   flex: 1;

@@ -96,6 +96,10 @@ import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useAuthenticatedAction, useSidebarResize, usePanelResize } from '@/composables'
+import { useWorkspaceLive } from '@/composables/workspaceLive'
+
+// 같은 워크스페이스의 다른 멤버가 바꾼 노트·폴더 목록을 실시간으로 반영
+useWorkspaceLive()
 import { getErrorMessage } from '@/utils/helpers'
 
 // 모달 컴포넌트 lazy loading
@@ -128,6 +132,10 @@ const {
 
 // 컨텐츠 모드
 const contentMode = ref('empty')
+// 열려 있던 노트가 사라지면(다른 멤버가 삭제 등) 빈 화면으로
+watch(() => postStore.currentPost, (post) => {
+  if (!post && contentMode.value === 'edit') contentMode.value = 'empty'
+})
 const isLoadingPost = ref(false)
 
 // 모달 상태

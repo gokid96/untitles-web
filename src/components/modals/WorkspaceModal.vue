@@ -97,9 +97,7 @@
               <!-- 검색 결과 -->
               <div v-if="showSearchResults && !isFull && (searchResults.length > 0 || typedEmail)" class="search-dropdown">
                 <div v-for="user in searchResults" :key="user.userId" class="search-item" @click="handleAddMember(user)">
-                  <div class="user-avatar" :style="{ backgroundColor: getAvatarColor(user.nickname || user.email) }">
-                    {{ (user.nickname || user.email).charAt(0).toUpperCase() }}
-                  </div>
+                  <UserAvatar :user-id="user.userId" :name="user.nickname || user.email" :image="user.profileImage" :size="36" />
                   <div class="user-info">
                     <span class="user-name">{{ user.nickname || '사용자' }}</span>
                     <span class="user-email">{{ user.email }}</span>
@@ -133,9 +131,7 @@
             </div>
             <div class="members-list">
               <div v-for="member in memberList" :key="member.memberId" class="member-card">
-                <div class="member-avatar" :style="{ backgroundColor: getAvatarColor(member.nickname || member.email || '?') }">
-                  {{ getMemberInitial(member) }}
-                </div>
+                <UserAvatar :user-id="member.userId" :name="member.nickname || member.email" :image="member.profileImage" :size="36" />
                 <div class="member-info">
                   <span class="member-name">
                     {{ member.nickname || member.email }}
@@ -175,10 +171,9 @@
             </div>
             <div v-else class="members-list">
               <div v-for="invite in inviteList" :key="invite.key" class="member-card pending">
-                <div class="member-avatar" :style="{ backgroundColor: getAvatarColor(invite.nickname || invite.email || '?') }">
-                  <Mail v-if="!invite.nickname" class="mail-icon" />
-                  <template v-else>{{ invite.nickname.charAt(0).toUpperCase() }}</template>
-                </div>
+                <UserAvatar v-if="invite.userId" class="pending-avatar" :user-id="invite.userId" :name="invite.nickname || invite.email"
+                  :image="invite.profileImage" :size="36" />
+                <div v-else class="member-avatar email-avatar"><Mail class="mail-icon" /></div>
                 <div class="member-info">
                   <span class="member-name">{{ invite.nickname || invite.email }}</span>
                   <span class="member-email">{{ inviteSubtitle(invite) }}</span>
@@ -243,6 +238,7 @@ import { ref, computed, watch, onUnmounted } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { User, Users, Calendar, Trash2, LogOut, Search, Info, X, Mail, UserMinus } from 'lucide-vue-next'
 import { askConfirm } from '@/utils/confirm'
+import UserAvatar from '@/components/common/UserAvatar.vue'
 import { useAuthStore } from '@/stores/authStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { userApi } from '@/api/userApi'
@@ -334,6 +330,7 @@ const inviteList = computed(() => {
     invitationId: i.invitationId,
     userId: i.inviteeUserId,
     nickname: i.inviteeNickname,
+    profileImage: i.inviteeProfileImage,
     email: i.email,
     role: i.role,
     expiresAt: i.expiresAt,
@@ -395,6 +392,11 @@ watch(() => props.visible, async (newVal) => {
   }
 })
 
+// 다른 사람이 멤버를 바꾸면(초대 수락, 내보내기 등) 열려 있는 목록을 다시 불러온다
+watch(() => workspaceStore.membersVersion, () => {
+  if (props.visible && isEditMode.value) loadMembers()
+})
+
 // 삭제 모달 키보드 이벤트
 watch(() => isDeleteConfirmOpen.value, (newVal) => {
   if (newVal) {
@@ -432,25 +434,6 @@ function handleDeleteKeydown(e) {
 }
 
 // 유틸 함수
-function getMemberInitial(member) {
-  const name = member.nickname || member.email || '?'
-  return name.charAt(0).toUpperCase()
-}
-
-function getAvatarColor(str) {
-  const colors = [
-    '#6366f1', '#8b5cf6', '#a855f7', '#d946ef',
-    '#ec4899', '#f43f5e', '#ef4444', '#f97316',
-    '#eab308', '#84cc16', '#22c55e', '#14b8a6',
-    '#06b6d4', '#0ea5e9', '#3b82f6'
-  ]
-  let hash = 0
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash)
-  }
-  return colors[Math.abs(hash) % colors.length]
-}
-
 function getRoleLabel(role) {
   const labels = {
     'OWNER': '소유자',
@@ -583,7 +566,7 @@ function handleSearchInput() {
 }
 
 // 초대 보내기 (새 워크스페이스는 목록에만 담아 두었다가 만든 뒤 보낸다)
-async function sendInvite({ userId, email, nickname }) {
+async function sendInvite({ userId, email, nickname, profileImage }) {
   if (isFull.value) {
     toast.add({ severity: 'warn', summary: '인원 초과', detail: `멤버는 대기 중인 초대를 포함해 최대 ${MEMBER_LIMIT}명까지예요.`, life: 3000 })
     return
@@ -592,7 +575,7 @@ async function sendInvite({ userId, email, nickname }) {
   if (!isEditMode.value) {
     const key = userId ? `u${userId}` : `e${email.toLowerCase()}`
     if (!pendingMembers.value.find((m) => m.key === key)) {
-      pendingMembers.value.push({ key, userId, email, nickname, role: inviteRole.value })
+      pendingMembers.value.push({ key, userId, email, nickname, profileImage, role: inviteRole.value })
     }
   } else {
     try {
@@ -616,7 +599,7 @@ async function sendInvite({ userId, email, nickname }) {
 }
 
 function handleAddMember(user) {
-  return sendInvite({ userId: user.userId, email: user.email, nickname: user.nickname })
+  return sendInvite({ userId: user.userId, email: user.email, nickname: user.nickname, profileImage: user.profileImage })
 }
 
 function inviteTypedEmail() {
@@ -941,7 +924,7 @@ async function confirmLeaveWorkspace() {
   color: var(--text-color-secondary);
 }
 
-.member-card.pending .member-avatar {
+.member-card.pending .pending-avatar {
   opacity: 0.75;
 }
 

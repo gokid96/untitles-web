@@ -1,16 +1,13 @@
 import { ref } from 'vue'
 import * as Y from 'yjs'
 import { HocuspocusProvider } from '@hocuspocus/provider'
+import { getFreshAccessToken } from '@/api/axios'
 
 /** 실시간 편집 서버 주소. 비어 있으면 실시간 편집을 쓰지 않는다 */
 export const COLLAB_URL = import.meta.env.VITE_COLLAB_URL || ''
 
-const CARET_COLORS = ['#f87171', '#fb923c', '#facc15', '#4ade80', '#2dd4bf', '#60a5fa', '#a78bfa', '#f472b6']
-
-export function caretColorFor(userId) {
-  const n = Number(userId) || 0
-  return CARET_COLORS[Math.abs(n) % CARET_COLORS.length]
-}
+// 커서 색은 프로필 기본 색과 같게 (같은 사람은 어디서나 같은 색)
+export { avatarColor as caretColorFor } from '@/utils/avatar'
 
 /**
  * 노트 하나에 대한 실시간 편집 연결.
@@ -42,13 +39,15 @@ export function createCollabSession({ workspaceId, postId, getToken, refreshToke
     url: COLLAB_URL,
     name: `post:${workspaceId}:${postId}`,
     document: ydoc,
-    token: () => getToken() || '',
+    // 연결(재연결 포함)할 때마다 만료 직전이면 새 토큰으로
+    token: () => getFreshAccessToken(),
     onStatus: ({ status: s }) => {
       status.value = s
     },
     // 첫 동기화 전에 연결이 끊기면(서버가 꺼져 있거나 막힘) 기다리지 않고 일반 저장으로 넘어가게 한다
     onClose: () => {
-      if (!synced.value) connectFailed = true
+      // 인증 실패로 닫힌 경우는 아래에서 토큰을 새로 받아 다시 연결하므로 제외
+      if (!synced.value && !refreshing && !authFailed.value) connectFailed = true
     },
     onSynced: ({ state }) => {
       if (state) synced.value = true
@@ -76,9 +75,17 @@ export function createCollabSession({ workspaceId, postId, getToken, refreshToke
     },
     onAwarenessUpdate: ({ states }) => {
       const me = ydoc.clientID
+      // 같은 사람이 여러 창으로 보고 있으면 한 번만
+      const seen = new Set()
       peers.value = states
         .filter((s) => s.clientId !== me && s.user?.name)
-        .map((s) => ({ clientId: s.clientId, name: s.user.name, color: s.user.color }))
+        .filter((s) => {
+          const key = s.user.userId ?? `c${s.clientId}`
+          if (seen.has(key)) return false
+          seen.add(key)
+          return true
+        })
+        .map((s) => ({ clientId: s.clientId, userId: s.user.userId, name: s.user.name, color: s.user.color, avatar: s.user.avatar }))
     },
   })
 

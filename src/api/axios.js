@@ -37,6 +37,29 @@ async function tokenRotatedByOtherTab(usedRefreshToken) {
   return null
 }
 
+function tokenExpiresAt(token) {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+    return (payload.exp || 0) * 1000
+  } catch {
+    return 0
+  }
+}
+
+/**
+ * 곧 만료될(1분 이내) 액세스 토큰이면 먼저 새로 받아서 돌려준다.
+ * 실시간 편집 연결처럼 401 응답으로 자동 재발급되지 않는 곳에서 쓴다.
+ */
+export async function getFreshAccessToken() {
+  const token = localStorage.getItem('accessToken')
+  if (token && tokenExpiresAt(token) - Date.now() > 60_000) return token
+  try {
+    return await refreshAccessToken()
+  } catch {
+    return localStorage.getItem('accessToken') || ''
+  }
+}
+
 export function refreshAccessToken() {
   if (!refreshPromise) {
     const refreshToken = localStorage.getItem('refreshToken')

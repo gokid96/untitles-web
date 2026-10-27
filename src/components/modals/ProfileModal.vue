@@ -15,8 +15,8 @@
         <div class="profile-row">
           <div class="avatar-wrapper" role="button" tabindex="0" aria-label="프로필 사진 변경"
             @click="triggerImageUpload" @keydown.enter.prevent="triggerImageUpload">
-            <img v-if="profileImageUrl" :src="profileImageUrl" alt="프로필" class="avatar-image" />
-            <div v-else class="avatar-placeholder">{{ userInitial }}</div>
+            <UserAvatar :user-id="authStore.userId" :name="profile.nickname || currentUser?.nickname" :image="profileImageUrl"
+              :size="64" shape="circle" />
             <div class="avatar-overlay">
               <Loader2 v-if="isUploading" class="overlay-icon spinning" />
               <Camera v-else class="overlay-icon" />
@@ -30,6 +30,7 @@
           </div>
         </div>
         <div class="row-actions">
+          <button type="button" class="text-btn" :disabled="isUploading" @click="triggerImageUpload">사진 변경</button>
           <button v-if="profileImageUrl" type="button" class="text-btn" :disabled="isUploading" @click="removeImage">사진 삭제</button>
           <Button label="저장" size="small" :disabled="!profileChanged || isUploading" :loading="isSavingProfile" @click="saveProfile" />
         </div>
@@ -164,6 +165,7 @@ import { storeToRefs } from 'pinia'
 import { useToast } from 'primevue/usetoast'
 import { Camera, Loader2, Unlink } from 'lucide-vue-next'
 import { askConfirm } from '@/utils/confirm'
+import UserAvatar from '@/components/common/UserAvatar.vue'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'

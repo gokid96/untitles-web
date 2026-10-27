@@ -10,8 +10,8 @@
       </div>
       <div class="topbar-right">
         <div v-if="collabPeers.length" class="collab-peers" :title="collabPeers.map((p) => p.name).join(', ') + ' 편집 중'">
-          <span v-for="peer in collabPeers.slice(0, 4)" :key="peer.clientId" class="peer-avatar"
-            :style="{ background: peer.color }">{{ (peer.name || '?').slice(0, 1) }}</span>
+          <UserAvatar v-for="peer in collabPeers.slice(0, 4)" :key="peer.clientId" class="peer-avatar"
+            :user-id="peer.userId" :name="peer.name" :image="peer.avatar" :size="24" shape="circle" :title="peer.name" />
           <span v-if="collabPeers.length > 4" class="peer-more">+{{ collabPeers.length - 4 }}</span>
         </div>
         <span v-if="isReadOnly" class="readonly-badge">읽기 전용</span>
@@ -161,6 +161,7 @@ import { useToast } from 'primevue/usetoast'
 import { imageApi } from '@/api/imageApi'
 import UnsavedChangesModal from '@/components/common/UnsavedChangesModal.vue'
 import ConflictModal from '@/components/common/ConflictModal.vue'
+import UserAvatar from '@/components/common/UserAvatar.vue'
 import LinkPopover from '@/components/editor/LinkPopover.vue'
 import { NoteLink } from '@/components/editor/noteLinkExtension'
 import { useGraphStore } from '@/stores/graphStore'
@@ -295,7 +296,12 @@ function buildEditorExtensions(session = null) {
       Collaboration.configure({ document: session.ydoc, field: 'default' }),
       CollaborationCaret.configure({
         provider: session.provider,
-        user: { name: user?.nickname || '익명', color: caretColorFor(authStore.userId) },
+        user: {
+          userId: authStore.userId,
+          name: user?.nickname || '익명',
+          color: caretColorFor(authStore.userId),
+          avatar: user?.profileImage || '',
+        },
       }),
     )
   }
@@ -1033,16 +1039,7 @@ onBeforeUnmount(() => {
 }
 
 .peer-avatar {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  color: #18181b;
-  border: 2px solid var(--surface-ground);
+  box-shadow: 0 0 0 2px var(--surface-ground);
   margin-left: -6px;
 }
 
@@ -1070,6 +1067,17 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 
+/* 편집기가 줄 끝 커서 위치를 잡으려고 넣는 보이지 않는 이미지: 노트 사진 스타일이 적용되면 줄이 들썩인다 */
+:deep(.ProseMirror img.ProseMirror-separator) {
+  display: inline !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
 /* 다른 사람의 커서 (CollaborationCaret) */
 :deep(.collaboration-carets__caret) {
   border-left: 1px solid #0d0d0d;
@@ -1083,7 +1091,7 @@ onBeforeUnmount(() => {
 
 :deep(.collaboration-carets__label) {
   border-radius: 3px 3px 3px 0;
-  color: #0d0d0d;
+  color: #fff;
   font-size: 0.6875rem;
   font-weight: 600;
   left: -1px;
