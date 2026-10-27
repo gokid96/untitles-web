@@ -83,14 +83,38 @@
         <div class="tab-content">
           <!-- 초대: 닉네임으로 찾거나 이메일 주소를 입력 (받은 사람이 수락해야 멤버가 됨) -->
           <div class="search-section" v-if="!isEditMode || workspaceStore.isAdmin">
-            <div class="search-wrapper">
-              <Search class="search-icon" />
-              <!-- 브라우저 주소 자동완성(저장된 이메일 목록)이 뜨지 않도록 검색 입력으로 지정 -->
-              <InputText v-model="searchEmail" type="search" name="member-query" autocomplete="off" role="combobox"
-                aria-autocomplete="list" placeholder="닉네임 또는 이메일로 초대" class="search-input"
-                @input="handleSearchInput" @focus="showSearchResults = true" @keydown.enter.prevent="inviteTypedEmail" />
-              <Dropdown v-model="inviteRole" :options="availableRoles" optionLabel="label" optionValue="value"
-                class="role-select" />
+            <!-- 검색창과 결과 목록: 결과는 검색창 바로 아래에 겹쳐서 뜬다 -->
+            <div class="search-box">
+              <div class="search-wrapper">
+                <Search class="search-icon" />
+                <!-- 브라우저 주소 자동완성(저장된 이메일 목록)이 뜨지 않도록 검색 입력으로 지정 -->
+                <InputText v-model="searchEmail" type="search" name="member-query" autocomplete="off" role="combobox"
+                  aria-autocomplete="list" placeholder="닉네임 또는 이메일로 초대" class="search-input"
+                  @input="handleSearchInput" @focus="showSearchResults = true" @keydown.enter.prevent="inviteTypedEmail" />
+                <Dropdown v-model="inviteRole" :options="availableRoles" optionLabel="label" optionValue="value"
+                  class="role-select" />
+              </div>
+              <!-- 검색 결과 -->
+              <div v-if="showSearchResults && !isFull && (searchResults.length > 0 || typedEmail)" class="search-dropdown">
+                <div v-for="user in searchResults" :key="user.userId" class="search-item" @click="handleAddMember(user)">
+                  <div class="user-avatar" :style="{ backgroundColor: getAvatarColor(user.nickname || user.email) }">
+                    {{ (user.nickname || user.email).charAt(0).toUpperCase() }}
+                  </div>
+                  <div class="user-info">
+                    <span class="user-name">{{ user.nickname || '사용자' }}</span>
+                    <span class="user-email">{{ user.email }}</span>
+                  </div>
+                  <Button label="초대" size="small" text class="add-btn" :loading="invitingKey === `u${user.userId}`" />
+                </div>
+                <div v-if="typedEmail" class="search-item" @click="inviteTypedEmail">
+                  <div class="user-avatar email-avatar"><Mail class="mail-icon" /></div>
+                  <div class="user-info">
+                    <span class="user-name">{{ typedEmail }}</span>
+                    <span class="user-email">이메일로 초대 보내기</span>
+                  </div>
+                  <Button label="초대" size="small" text class="add-btn" :loading="invitingKey === `e${typedEmail}`" />
+                </div>
+              </div>
             </div>
             <p class="invite-hint">초대받은 사람이 수락하면 멤버가 돼요. 초대는 7일 동안 유효해요.</p>
 
@@ -100,27 +124,6 @@
               <span>멤버는 대기 중인 초대를 포함해 최대 {{ MEMBER_LIMIT }}명까지예요.</span>
             </div>
 
-            <!-- 검색 결과 -->
-            <div v-if="showSearchResults && !isFull && (searchResults.length > 0 || typedEmail)" class="search-dropdown">
-              <div v-for="user in searchResults" :key="user.userId" class="search-item" @click="handleAddMember(user)">
-                <div class="user-avatar" :style="{ backgroundColor: getAvatarColor(user.nickname || user.email) }">
-                  {{ (user.nickname || user.email).charAt(0).toUpperCase() }}
-                </div>
-                <div class="user-info">
-                  <span class="user-name">{{ user.nickname || '사용자' }}</span>
-                  <span class="user-email">{{ user.email }}</span>
-                </div>
-                <Button label="초대" size="small" text class="add-btn" :loading="invitingKey === `u${user.userId}`" />
-              </div>
-              <div v-if="typedEmail" class="search-item" @click="inviteTypedEmail">
-                <div class="user-avatar email-avatar"><Mail class="mail-icon" /></div>
-                <div class="user-info">
-                  <span class="user-name">{{ typedEmail }}</span>
-                  <span class="user-email">이메일로 초대 보내기</span>
-                </div>
-                <Button label="초대" size="small" text class="add-btn" :loading="invitingKey === `e${typedEmail}`" />
-              </div>
-            </div>
           </div>
 
           <!-- 멤버 목록 (기존 워크스페이스) -->
@@ -953,6 +956,10 @@ async function confirmLeaveWorkspace() {
   gap: 0.75rem;
 }
 
+.search-box {
+  position: relative;
+}
+
 .search-wrapper {
   display: flex;
   align-items: center;
@@ -972,6 +979,7 @@ async function confirmLeaveWorkspace() {
 
 .search-wrapper .search-input {
   flex: 1;
+  min-width: 0;
   border: none;
   background: transparent;
   padding: 0.5rem;
@@ -982,6 +990,7 @@ async function confirmLeaveWorkspace() {
 }
 
 .role-select {
+  flex-shrink: 0;
   border: none;
   background: var(--surface-card);
   border-radius: 8px;
@@ -997,10 +1006,11 @@ async function confirmLeaveWorkspace() {
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  background: var(--surface-overlay);
+  /* 모달 배경과 구분되도록 한 단계 밝은 면 + 그림자 */
+  background: #ffffff;
   border: 1px solid var(--surface-border);
   border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
   z-index: 100;
   max-height: 240px;
   overflow-y: auto;
@@ -1025,6 +1035,20 @@ async function confirmLeaveWorkspace() {
 
 .search-item:hover {
   background: var(--surface-hover);
+}
+
+.dark-mode .search-dropdown {
+  background: #2c2c33;
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
+}
+
+.dark-mode .search-item:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.search-item + .search-item {
+  border-top: 1px solid var(--surface-border);
 }
 
 /* 아바타 */
@@ -1065,12 +1089,7 @@ async function confirmLeaveWorkspace() {
 }
 
 .add-btn {
-  opacity: 0;
-  transition: opacity 0.15s ease;
-}
-
-.search-item:hover .add-btn {
-  opacity: 1;
+  flex-shrink: 0;
 }
 
 /* 멤버 섹션 */
