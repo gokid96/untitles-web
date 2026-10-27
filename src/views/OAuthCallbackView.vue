@@ -8,14 +8,18 @@
 </template>
 
 <script setup>
-import { setTokens, clearTokens } from '@/utils/tokenStore'
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import { usePostStore } from '@/stores/postStore'
-import { restoreGuestDraft } from '@/utils/helpers'
+import { restoreGuestDraft, getErrorMessage } from '@/utils/helpers'
+import { exchangeLoginCode } from '@/utils/socialAuth'
 import { useToast } from 'primevue/usetoast'
 
+/**
+ * 웹 리다이렉트 방식 소셜 로그인(카카오·구글) 후 돌아오는 화면.
+ * 서버가 준 1분짜리 일회용 코드(?code=)를 토큰으로 바꾼다. (토큰은 주소에 실리지 않는다)
+ */
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
@@ -24,72 +28,31 @@ const toast = useToast()
 
 const statusMessage = ref('로그인 처리 중...')
 
+function fail(message) {
+  toast.add({ severity: 'error', summary: '로그인 실패', detail: message, life: 6000 })
+  router.replace('/login')
+}
+
 onMounted(async () => {
-  const errorParam = route.query.error
+  if (route.query.error) return fail(String(route.query.error))
 
-  if (errorParam) {
-    toast.add({
-      severity: 'error',
-      summary: '로그인 실패',
-      detail: decodeURIComponent(errorParam),
-      life: 5000,
-    })
-    router.replace('/login')
-    return
-  }
-
-  // URL에서 JWT 토큰 추출 (?accessToken=xxx&refreshToken=xxx)
-  const accessToken = route.query.accessToken
-  const refreshToken = route.query.refreshToken
-
-  if (!accessToken || !refreshToken) {
-    toast.add({
-      severity: 'error',
-      summary: '로그인 실패',
-      detail: '토큰을 받지 못했습니다. 다시 로그인해주세요.',
-      life: 5000,
-    })
-    router.replace('/login')
-    return
-  }
+  const code = route.query.code
+  if (!code) return fail('로그인 정보를 받지 못했습니다. 다시 시도해주세요.')
 
   try {
+    const loginResponse = await exchangeLoginCode(String(code))
     statusMessage.value = '사용자 정보 확인 중...'
-
-    // 토큰 저장
-    setTokens(accessToken, refreshToken)
-
-    // 사용자 정보 로드
-    const success = await authStore.loadUserFromStorage()
-
-    if (!success) {
-      throw new Error('사용자 정보를 가져오지 못했습니다.')
-    }
-
+    await authStore.completeLogin(loginResponse)
+    await restoreGuestDraft(postStore)
     toast.add({
       severity: 'success',
       summary: '로그인 성공',
       detail: `${authStore.currentUser?.nickname || ''}님 환영합니다!`,
       life: 3000,
     })
-
-    // 비로그인 임시 저장 복구
-    await restoreGuestDraft(postStore)
-
     router.replace('/')
   } catch (error) {
-    console.error('OAuth 콜백 처리 실패:', error)
-
-    clearTokens()
-
-    toast.add({
-      severity: 'error',
-      summary: '로그인 실패',
-      detail: '소셜 로그인 처리 중 오류가 발생했습니다.',
-      life: 5000,
-    })
-
-    router.replace('/login')
+    fail(getErrorMessage(error))
   }
 })
 </script>
@@ -100,32 +63,32 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #0a0a0f 0%, #0f0f1a 50%, #0a1020 100%);
+  background: var(--surface-ground);
 }
 
 .loading-container {
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
 }
 
 .loading-spinner {
-  width: 48px;
-  height: 48px;
-  border: 3px solid rgba(255, 255, 255, 0.1);
-  border-top-color: #ffffff;
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--surface-border);
+  border-top-color: var(--primary-color);
   border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 1.5rem;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  animation: spin 0.8s linear infinite;
 }
 
 .loading-text {
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 1rem;
-  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-color-secondary);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 </style>

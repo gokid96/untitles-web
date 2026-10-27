@@ -20,7 +20,7 @@
       <label for="forgot-code">인증번호</label>
       <InputText id="forgot-code" v-model="code" inputmode="numeric" maxlength="6" placeholder="6자리 숫자" autocomplete="one-time-code" />
       <label for="forgot-new">새 비밀번호</label>
-      <Password id="forgot-new" v-model="newPassword" :feedback="false" toggle-mask placeholder="영문, 숫자, 특수문자 포함 8-20자" input-class="w-full" />
+      <Password id="forgot-new" v-model="newPassword" :feedback="false" toggle-mask placeholder="영문과 숫자 포함 8자 이상" input-class="w-full" />
       <label for="forgot-confirm">새 비밀번호 확인</label>
       <Password id="forgot-confirm" v-model="confirmPassword" :feedback="false" toggle-mask placeholder="한 번 더 입력" input-class="w-full" />
       <Button type="submit" label="비밀번호 변경" :loading="isLoading" />
@@ -37,7 +37,7 @@ import Password from 'primevue/password'
 import Button from 'primevue/button'
 import { useToast } from 'primevue/usetoast'
 import { userApi } from '@/api/userApi'
-import { getErrorMessage } from '@/utils/helpers'
+import { getErrorMessage, isValidPassword, PASSWORD_RULE_TEXT } from '@/utils/helpers'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -82,8 +82,8 @@ async function confirmReset() {
     toast.add({ severity: 'warn', summary: '입력 오류', detail: '인증번호 6자리를 입력해주세요.', life: 3000 })
     return
   }
-  if (!/^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,20}$/.test(newPassword.value)) {
-    toast.add({ severity: 'warn', summary: '입력 오류', detail: '비밀번호는 8-20자의 영문, 숫자, 특수문자를 포함해야 합니다.', life: 3000 })
+  if (!isValidPassword(newPassword.value)) {
+    toast.add({ severity: 'warn', summary: '입력 오류', detail: PASSWORD_RULE_TEXT, life: 3000 })
     return
   }
   if (newPassword.value !== confirmPassword.value) {

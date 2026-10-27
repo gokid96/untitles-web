@@ -131,6 +131,12 @@ export function buildFolderTree(folders, rootPosts = [], sortOption = 'name_asc'
 }
 
 // 에러 메시지 추출
+// 비밀번호 규칙 (서버 PasswordPolicy와 같음): 8~64자, 영문과 숫자 포함, 모든 문자 허용
+export const PASSWORD_RULE_TEXT = '비밀번호는 8~64자이며 영문과 숫자를 포함해야 합니다'
+export function isValidPassword(password) {
+  return /^(?=.*[A-Za-z])(?=.*\d)[\s\S]{8,64}$/.test(password || '')
+}
+
 export function getErrorMessage(error) {
   if (error.response?.data?.message) {
     return error.response.data.message

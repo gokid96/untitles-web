@@ -28,14 +28,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     try {
       const response = await userApi.getUserInfo()
-      currentUser.value = {
-        userId: response.data.userId,
-        id: response.data.userId,
-        email: response.data.email,
-        loginId: response.data.loginId,
-        nickname: response.data.nickname,
-        profileImage: response.data.profileImage,
-      }
+      currentUser.value = { ...response.data }
 
       const workspaceStore = useWorkspaceStore()
       await workspaceStore.loadWorkspaces()
@@ -61,46 +54,29 @@ export const useAuthStore = defineStore('auth', () => {
     postStore.clearPostData()
   }
 
-  // 로그인
+  // 로그인 (이메일 또는 아이디)
   async function login(loginId, password) {
     const response = await userApi.login(loginId, password)
-    const userData = response.data
-
-    saveTokens(userData.accessToken, userData.refreshToken)
-
-    currentUser.value = {
-      userId: userData.userId,
-      id: userData.userId,
-      loginId: userData.loginId,
-      nickname: userData.nickname,
-      profileImage: userData.profileImage,
-    }
-
-    const workspaceStore = useWorkspaceStore()
-    await workspaceStore.loadWorkspaces()
-
-    return userData
+    await completeLogin(response.data)
+    return response.data
   }
 
   // 회원가입
   async function register(userData) {
     const response = await userApi.register(userData)
-    const data = response.data
+    await completeLogin(response.data)
+    return response.data
+  }
 
-    saveTokens(data.accessToken, data.refreshToken)
-
-    currentUser.value = {
-      userId: data.userId,
-      id: data.userId,
-      loginId: data.loginId,
-      nickname: data.nickname,
-      profileImage: data.profileImage,
-    }
-
-    const workspaceStore = useWorkspaceStore()
-    await workspaceStore.loadWorkspaces()
-
-    return data
+  /**
+   * 로그인 응답(토큰)을 받은 뒤 공통 처리: 토큰 저장 → 내 정보(연결된 로그인 등) 불러오기 → 워크스페이스
+   * 소셜 로그인·이메일 가입에서 쓴다
+   */
+  async function completeLogin(loginResponse) {
+    saveTokens(loginResponse.accessToken, loginResponse.refreshToken)
+    const ok = await loadUserFromStorage()
+    if (!ok) throw new Error('사용자 정보를 가져오지 못했습니다.')
+    return currentUser.value
   }
 
   // 로그아웃
@@ -124,20 +100,13 @@ export const useAuthStore = defineStore('auth', () => {
     const response = await userApi.updateUser(data)
     const userData = response.data
 
-    currentUser.value = {
-      ...currentUser.value,
-      userId: userData.userId,
-      id: userData.userId,
-      email: userData.email,
-      loginId: userData.loginId,
-      nickname: userData.nickname,
-      profileImage: userData.profileImage,
-    }
+    currentUser.value = { ...currentUser.value, ...userData }
 
     return userData
   }
 
   return {
+    completeLogin,
     currentUser,
     userId,
     isAuthenticated,

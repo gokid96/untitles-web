@@ -8,6 +8,9 @@ function transformUser(user) {
     loginId: user.loginId,
     nickname: user.nickname,
     profileImage: user.profileImage,
+    emailVerified: !!user.emailVerified,
+    hasPassword: user.hasPassword !== false,
+    providers: user.providers || [],
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   }
@@ -27,6 +30,19 @@ function transformLoginResponse(loginResponse) {
 }
 
 export const userApi = {
+
+  // 소셜 로그인: 앱(구글·애플)·웹(애플)은 ID 토큰, 웹 리다이렉트(카카오 등)는 일회용 코드
+  async socialLogin(provider, payload) {
+    const response = await apiClient.post(`/auth/social/${provider}`, payload)
+    response.data = transformLoginResponse(response.data)
+    return response
+  },
+
+  async exchangeLoginCode(code) {
+    const response = await apiClient.post('/auth/social/exchange', { code })
+    response.data = transformLoginResponse(response.data)
+    return response
+  },
 
   // 회원가입
   async register(userData) {

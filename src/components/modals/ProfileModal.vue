@@ -28,9 +28,23 @@
         <span class="avatar-hint">클릭하여 이미지 변경</span>
       </div>
 
+      <!-- 로그인 방법 -->
+      <div class="field">
+        <label>로그인 방법</label>
+        <div class="login-methods">
+          <span v-for="p in providers" :key="p" class="method-chip" :class="p.toLowerCase()">{{ providerName[p] || p }}</span>
+          <span v-if="currentUser?.hasPassword" class="method-chip password">
+            {{ currentUser?.loginId ? `아이디 ${currentUser.loginId}` : '이메일 + 비밀번호' }}
+          </span>
+        </div>
+      </div>
+
       <!-- 이메일 (비밀번호 찾기용) -->
       <div class="field">
-        <label for="email">이메일</label>
+        <label for="email">
+          이메일
+          <span v-if="currentUser?.email && currentUser?.emailVerified && formData.email === currentUser.email" class="verified">✓ 확인됨</span>
+        </label>
         <InputText
           id="email"
           v-model="formData.email"
@@ -52,8 +66,12 @@
         />
       </div>
 
-      <!-- 현재 비밀번호 -->
-      <div class="field">
+      <p v-if="!currentUser?.hasPassword" class="hint set-password-hint">
+        소셜 로그인으로 가입한 계정이에요. 비밀번호를 설정하면 이메일로도 로그인할 수 있어요.
+      </p>
+
+      <!-- 현재 비밀번호 (비밀번호가 있는 계정만) -->
+      <div v-if="currentUser?.hasPassword" class="field">
         <label for="currentPassword">현재 비밀번호</label>
         <Password
           id="currentPassword"
@@ -132,7 +150,7 @@ import Button from 'primevue/button'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import { imageApi } from '@/api/imageApi'
-import { getErrorMessage } from '@/utils/helpers'
+import { getErrorMessage, isValidPassword, PASSWORD_RULE_TEXT } from '@/utils/helpers'
 
 const props = defineProps({
   visible: {
@@ -152,6 +170,9 @@ const isSaving = ref(false)
 const isDeleting = ref(false)
 const confirmingDelete = ref(false)
 const isUploading = ref(false)
+const providers = computed(() => currentUser.value?.providers || [])
+const providerName = { KAKAO: '카카오', APPLE: 'Apple', GOOGLE: 'Google', NAVER: '네이버' }
+
 const imageInput = ref(null)
 
 const formData = reactive({
@@ -270,9 +291,10 @@ async function handleSave() {
     return
   }
 
-  // 비밀번호 변경 시 유효성 검사
+  // 비밀번호 변경 시 유효성 검사 (소셜 가입 계정의 첫 설정은 현재 비밀번호 없음)
+  const needsCurrent = currentUser.value?.hasPassword !== false
   if (formData.newPassword || formData.currentPassword) {
-    if (!formData.currentPassword) {
+    if (needsCurrent && !formData.currentPassword) {
       toast.add({
         severity: 'warn',
         summary: '입력 오류',
@@ -292,11 +314,11 @@ async function handleSave() {
       return
     }
 
-    if (formData.newPassword.length < 6) {
+    if (!isValidPassword(formData.newPassword)) {
       toast.add({
         severity: 'warn',
         summary: '입력 오류',
-        detail: '비밀번호는 최소 6자 이상이어야 합니다.',
+        detail: PASSWORD_RULE_TEXT,
         life: 3000,
       })
       return
@@ -330,8 +352,8 @@ async function handleSave() {
     }
 
     // 비밀번호 변경이 있는 경우
-    if (formData.newPassword && formData.currentPassword) {
-      updateData.currentPassword = formData.currentPassword
+    if (formData.newPassword && (formData.currentPassword || !needsCurrent)) {
+      if (needsCurrent) updateData.currentPassword = formData.currentPassword
       updateData.newPassword = formData.newPassword
     }
 
@@ -513,5 +535,32 @@ async function handleSave() {
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
+}
+.login-methods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.method-chip {
+  padding: 0.25rem 0.625rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  border: 1px solid var(--surface-border);
+  color: var(--text-color);
+}
+.method-chip.kakao { background: #FEE500; color: rgba(0, 0, 0, 0.85); border-color: transparent; }
+.method-chip.apple { background: #000; color: #fff; border-color: #333; }
+.method-chip.google { background: #fff; color: #1f1f1f; border-color: #dadce0; }
+
+.verified {
+  margin-left: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #22c55e;
+}
+
+.set-password-hint {
+  margin: 0;
 }
 </style>

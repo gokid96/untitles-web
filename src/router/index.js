@@ -29,6 +29,11 @@ const router = createRouter({
       meta: { requiresAuth: false },
     },
     {
+      // 웹 애플 로그인(팝업)의 등록된 돌아올 주소. 팝업 방식이라 실제로는 거의 열리지 않는다
+      path: '/oauth/apple',
+      redirect: '/login',
+    },
+    {
       path: '/oauth/callback',
       name: 'oauth-callback',
       component: () => import('@/views/OAuthCallbackView.vue'),
