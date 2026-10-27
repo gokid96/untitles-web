@@ -76,6 +76,15 @@
 				<string>net.untitles.app</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>google-signin</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<!-- Google 로그인(iOS 클라이언트 ID를 거꾸로 쓴 값) -->
+				<string>com.googleusercontent.apps.47346677395-71659iqcd13jofsol7s2khk9pis6ntv7</string>
+			</array>
+		</dict>
 	</array>
 </dict>
 </plist>
