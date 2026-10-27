@@ -108,7 +108,8 @@
     </form>
 
     <p class="legal">
-      계속하면 <router-link to="/privacy" @click="$emit('navigate')">개인정보처리방침</router-link>에 동의하는 것으로 봅니다.
+      계속하면 <router-link to="/terms" @click="$emit('navigate')">이용약관</router-link> 및
+      <router-link to="/privacy" @click="$emit('navigate')">개인정보처리방침</router-link>에 동의하게 됩니다.
     </p>
 
     <ForgotPasswordModal v-model:visible="isForgotOpen" :initial-email="email" />
