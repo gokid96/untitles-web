@@ -36,6 +36,7 @@ export function createCollabSession({ workspaceId, postId, getToken, refreshToke
 
   let refreshing = false
   let destroyed = false
+  let connectFailed = false
 
   const provider = new HocuspocusProvider({
     url: COLLAB_URL,
@@ -44,6 +45,10 @@ export function createCollabSession({ workspaceId, postId, getToken, refreshToke
     token: () => getToken() || '',
     onStatus: ({ status: s }) => {
       status.value = s
+    },
+    // 첫 동기화 전에 연결이 끊기면(서버가 꺼져 있거나 막힘) 기다리지 않고 일반 저장으로 넘어가게 한다
+    onClose: () => {
+      if (!synced.value) connectFailed = true
     },
     onSynced: ({ state }) => {
       if (state) synced.value = true
@@ -85,13 +90,16 @@ export function createCollabSession({ workspaceId, postId, getToken, refreshToke
     if (!event.transaction.local) onRemoteTitle?.(yTitle.toString())
   })
 
-  /** 첫 동기화를 기다린다. 시간 안에 안 되면 false */
+  /**
+   * 첫 동기화를 기다린다. 시간 안에 안 되거나, 편집 서버에 연결이 거부되면(꺼져 있음 등) 바로 false
+   */
   function waitForSync(timeoutMs) {
     if (synced.value) return Promise.resolve(true)
     return new Promise((resolve) => {
       const started = Date.now()
       const timer = setInterval(() => {
-        if (synced.value || destroyed || authFailed.value || Date.now() - started > timeoutMs) {
+        const refused = connectFailed && Date.now() - started > 300
+        if (synced.value || destroyed || authFailed.value || refused || Date.now() - started > timeoutMs) {
           clearInterval(timer)
           resolve(synced.value && !destroyed)
         }

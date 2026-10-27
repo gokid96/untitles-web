@@ -863,7 +863,7 @@ function loadIntoEditor(content) {
 const collab = shallowRef(null) // 지금 노트의 실시간 편집 연결
 const collabMode = ref(false) // 실시간 편집으로 동작 중인지 (아니면 일반 저장 방식)
 const isConnecting = ref(false)
-const COLLAB_SYNC_TIMEOUT = 6000
+const COLLAB_SYNC_TIMEOUT = 5000
 let openSeq = 0
 
 const collabPeers = computed(() => collab.value?.peers.value || [])
