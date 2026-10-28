@@ -89,7 +89,7 @@
                 <Search class="search-icon" />
                 <!-- 브라우저 주소 자동완성(저장된 이메일 목록)이 뜨지 않도록 검색 입력으로 지정 -->
                 <InputText v-model="searchEmail" type="search" name="member-query" autocomplete="off" role="combobox"
-                  aria-autocomplete="list" placeholder="닉네임 또는 이메일로 초대" class="search-input"
+                  aria-autocomplete="list" placeholder="닉네임·이메일로 초대" class="search-input"
                   @input="handleSearchInput" @focus="showSearchResults = true" @keydown.enter.prevent="inviteTypedEmail" />
                 <Dropdown v-model="inviteRole" :options="availableRoles" optionLabel="label" optionValue="value"
                   class="role-select" />
@@ -808,12 +808,26 @@ async function confirmLeaveWorkspace() {
 .info-row {
   display: flex;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
 }
 
 .info-item {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  min-width: 0;
+}
+
+.info-value {
+  white-space: nowrap;
+}
+
+/* 휴대폰: 세 항목을 한 줄씩 */
+@media (max-width: 480px) {
+  .info-row {
+    flex-direction: column;
+  }
 }
 
 .info-icon {

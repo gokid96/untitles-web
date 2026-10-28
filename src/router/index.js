@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
+import { isNativeApp } from '@/utils/platform'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -91,8 +92,12 @@ router.beforeEach(async (to, from, next) => {
     await authStore.loadUserFromStorage()
   }
 
+  // 스토어 앱은 로그인 전에 빈 편집기 대신 시작(로그인·가입) 화면부터 보여준다. 웹은 둘러보기를 허용
+  if (isNativeApp && to.name === 'app' && !authStore.isAuthenticated) {
+    next({ name: 'login' })
+  }
   // 인증이 필요한 페이지인 경우
-  if (to.meta.requiresAuth) {
+  else if (to.meta.requiresAuth) {
     if (!authStore.isAuthenticated) {
       next({ name: 'login', query: { redirect: to.fullPath } })
     } else {

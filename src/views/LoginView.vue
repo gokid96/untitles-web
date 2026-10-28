@@ -2,7 +2,7 @@
   <div class="login-view">
     <div class="login-card">
       <AuthPanel :initial-step="initialStep" :link-token="linkToken" @done="goNext" />
-      <router-link to="/" class="back-home">← 둘러보기로 돌아가기</router-link>
+      <router-link v-if="!isNativeApp" to="/" class="back-home">← 둘러보기로 돌아가기</router-link>
     </div>
   </div>
 </template>
@@ -12,6 +12,7 @@ import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import AuthPanel from '@/components/auth/AuthPanel.vue'
+import { isNativeApp } from '@/utils/platform'
 
 defineProps({
   initialStep: { type: String, default: 'start' },
