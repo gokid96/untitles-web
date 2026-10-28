@@ -130,8 +130,6 @@
 import { ref, shallowRef, watch, computed, onMounted, onBeforeUnmount } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
 import { Editor, EditorContent } from '@tiptap/vue-3'
-import Collaboration from '@tiptap/extension-collaboration'
-import CollaborationCaret from '@tiptap/extension-collaboration-caret'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
@@ -146,7 +144,7 @@ import { TableRow } from '@tiptap/extension-table-row'
 import { TableCell } from '@tiptap/extension-table-cell'
 import { TableHeader } from '@tiptap/extension-table-header'
 import Image from '@tiptap/extension-image'
-import { common, createLowlight } from 'lowlight'
+import { createLowlight } from 'lowlight'
 import TurndownService from 'turndown'
 import { 
   Folder, Loader2, Circle, Check, Highlighter, Link2, 
@@ -169,10 +167,48 @@ import { useGraphStore } from '@/stores/graphStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { postApi } from '@/api/postApi'
 import { createNormalizer, mergeContent, mergeTitle } from '@/utils/noteMerge'
-import { COLLAB_URL, createCollabSession, caretColorFor } from '@/composables/collabSession'
+import { COLLAB_URL, caretColorFor } from '@/composables/collabConfig'
+
+// 실시간 편집 코드(yjs·hocuspocus·Collaboration 확장)는 실시간으로 여는 노트가 있을 때 불러온다
+let collabLibs = null
+let collabLibsPromise = null
+function loadCollabLibs() {
+  if (!collabLibsPromise) {
+    collabLibsPromise = Promise.all([
+      import('@/composables/collabSession'),
+      import('@tiptap/extension-collaboration'),
+      import('@tiptap/extension-collaboration-caret'),
+    ]).then(([session, collaboration, caret]) => {
+      collabLibs = {
+        createCollabSession: session.createCollabSession,
+        Collaboration: collaboration.default,
+        CollaborationCaret: caret.default,
+      }
+      return collabLibs
+    })
+    collabLibsPromise.catch(() => { collabLibsPromise = null })
+  }
+  return collabLibsPromise
+}
 import { refreshAccessToken } from '@/api/axios'
 
-const lowlight = createLowlight(common)
+// 코드 블록 색칠: 언어 사전은 크기가 커서 따로 받아 온다. 받아 오면 열려 있는 코드 블록을 다시 칠한다
+const lowlight = createLowlight()
+import('@/utils/codeLanguages').then(({ common }) => {
+  lowlight.register(common)
+  rehighlightCodeBlocks()
+}).catch(() => {})
+
+function rehighlightCodeBlocks() {
+  const ed = editor.value
+  if (!ed || ed.isDestroyed) return
+  const { state } = ed
+  const tr = state.tr
+  state.doc.descendants((node, pos) => {
+    if (node.type.name === 'codeBlock') tr.setNodeMarkup(pos, undefined, node.attrs)
+  })
+  if (tr.steps.length) ed.view.dispatch(tr.setMeta('addToHistory', false))
+}
 const folderStore = useFolderStore()
 const postStore = usePostStore()
 const authStore = useAuthStore()
@@ -298,6 +334,7 @@ function buildEditorExtensions(session = null) {
   ]
   if (session) {
     const user = authStore.currentUser
+    const { Collaboration, CollaborationCaret } = collabLibs
     extensions.push(
       Collaboration.configure({ document: session.ydoc, field: 'default' }),
       CollaborationCaret.configure({
@@ -914,8 +951,17 @@ async function openPost(post) {
   currentVersion.value = post?.version ?? null
 
   const workspaceId = workspaceStore.currentWorkspaceId
+  let libs = null
   if (post?.id && COLLAB_URL && authStore.isAuthenticated && workspaceId) {
-    const session = createCollabSession({
+    try {
+      libs = await loadCollabLibs()
+    } catch {
+      libs = null // 못 불러오면 일반 저장 방식으로
+    }
+    if (seq !== openSeq) return
+  }
+  if (libs) {
+    const session = libs.createCollabSession({
       workspaceId,
       postId: post.id,
       getToken: () => localStorage.getItem('accessToken'),

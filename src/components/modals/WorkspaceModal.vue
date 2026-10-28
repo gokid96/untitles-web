@@ -390,7 +390,7 @@ watch(() => props.visible, async (newVal) => {
   } else {
     document.removeEventListener('keydown', handleMainKeydown)
   }
-})
+}, { immediate: true }) // 열 때 처음 불러와도(지연 로딩) 초기화되도록
 
 // 다른 사람이 멤버를 바꾸면(초대 수락, 내보내기 등) 열려 있는 목록을 다시 불러온다
 watch(() => workspaceStore.membersVersion, () => {

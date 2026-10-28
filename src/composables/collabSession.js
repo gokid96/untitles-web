@@ -3,11 +3,8 @@ import * as Y from 'yjs'
 import { HocuspocusProvider } from '@hocuspocus/provider'
 import { getFreshAccessToken } from '@/api/axios'
 
-/** 실시간 편집 서버 주소. 비어 있으면 실시간 편집을 쓰지 않는다 */
-export const COLLAB_URL = import.meta.env.VITE_COLLAB_URL || ''
-
-// 커서 색은 프로필 기본 색과 같게 (같은 사람은 어디서나 같은 색)
-export { avatarColor as caretColorFor } from '@/utils/avatar'
+import { COLLAB_URL } from '@/composables/collabConfig'
+export { COLLAB_URL, caretColorFor } from '@/composables/collabConfig'
 
 /**
  * 노트 하나에 대한 실시간 편집 연결.

@@ -233,7 +233,7 @@ watch(() => props.visible, (open) => {
   confirmingDelete.value = false
   // 다른 기기에서 바꾼 내용(연결 등)도 보이도록
   authStore.refreshUser().catch(() => {})
-})
+}, { immediate: true }) // 열 때 처음 불러와도(지연 로딩) 초기화되도록
 
 function handleVisibleChange(value) {
   emit('update:visible', value)

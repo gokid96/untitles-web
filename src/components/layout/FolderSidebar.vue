@@ -110,7 +110,7 @@
         </button>
       </div>
 
-      <TrashModal v-model:visible="isTrashOpen" />
+      <TrashModal v-if="isTrashOpen || trashLoaded" v-model:visible="isTrashOpen" />
 
       <!-- 하단 사용자 메뉴 -->
       <UserMenu />
@@ -121,11 +121,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { defineAsyncComponent, ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { Search, X, FilePlus, FolderPlus, ChevronsUp, ChevronsDown, ArrowUpDown, Waypoints, FolderOpen, FolderPlus as Folder, FileText, LogIn, Trash2 } from 'lucide-vue-next'
 import TreeNode from './TreeNode.vue'
 import UserMenu from './UserMenu.vue'
-import TrashModal from '@/components/modals/TrashModal.vue'
+const TrashModal = defineAsyncComponent(() => import('@/components/modals/TrashModal.vue'))
 import SidebarSkeleton from '@/components/common/SidebarSkeleton.vue'
 import ContextMenu from 'primevue/contextmenu'
 import Menu from 'primevue/menu'
@@ -137,6 +137,8 @@ import { useUiStore } from '@/stores/uiStore'
 import { debounce } from '@/utils/helpers'
 
 const isTrashOpen = ref(false)
+const trashLoaded = ref(false)  // 처음 열 때 불러오고 그 뒤로는 남겨 둔다
+watch(isTrashOpen, (v) => { if (v) trashLoaded.value = true })
 
 const folderStore = useFolderStore()
 const postStore = usePostStore()

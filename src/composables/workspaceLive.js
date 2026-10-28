@@ -1,8 +1,17 @@
 import { watch, onBeforeUnmount } from 'vue'
-import * as Y from 'yjs'
-import { HocuspocusProvider } from '@hocuspocus/provider'
 import { useToast } from 'primevue/usetoast'
-import { COLLAB_URL } from '@/composables/collabSession'
+import { COLLAB_URL } from '@/composables/collabConfig'
+
+// 실시간 연결 라이브러리(yjs·hocuspocus)는 로그인한 사용자에게만 필요하므로 그때 불러온다
+let libsPromise = null
+function loadLibs() {
+  if (!libsPromise) {
+    libsPromise = Promise.all([import('yjs'), import('@hocuspocus/provider')])
+      .then(([Y, { HocuspocusProvider }]) => ({ Y, HocuspocusProvider }))
+    libsPromise.catch(() => { libsPromise = null })
+  }
+  return libsPromise
+}
 import { refreshAccessToken, getFreshAccessToken } from '@/api/axios'
 import { useAuthStore } from '@/stores/authStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
@@ -107,6 +116,7 @@ export function useWorkspaceLive() {
   }
 
   function disconnect() {
+    connectSeq++
     provider?.destroy()
     ydoc?.destroy()
     provider = null
@@ -114,10 +124,21 @@ export function useWorkspaceLive() {
     connected = false
   }
 
-  function connect(workspaceId) {
+  let connectSeq = 0
+  async function connect(workspaceId) {
     disconnect()
     removedNoticeShown = false
     if (!COLLAB_URL || !workspaceId || !authStore.isAuthenticated) return
+    const seq = ++connectSeq
+    let libs
+    try {
+      libs = await loadLibs()
+    } catch {
+      return
+    }
+    // 불러오는 사이 워크스페이스가 바뀌었거나 로그아웃함
+    if (seq !== connectSeq || workspaceStore.currentWorkspaceId !== workspaceId || !authStore.isAuthenticated) return
+    const { Y, HocuspocusProvider } = libs
     ydoc = new Y.Doc()
     let refreshing = false
     let lastAuthRetry = 0

@@ -102,7 +102,8 @@ watch(
       confirmEmpty.value = false
       load()
     }
-  }
+  },
+  { immediate: true }, // 열 때 처음 불러와도(지연 로딩) 초기화되도록
 )
 
 async function load() {

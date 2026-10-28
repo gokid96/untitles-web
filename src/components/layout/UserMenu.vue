@@ -93,9 +93,12 @@
     </Transition>
 
     <!-- 모달 -->
-    <ProfileModal v-model:visible="isProfileModalOpen" />
-    <InvitationsModal v-model:visible="isInvitationsOpen" @accepted="handleInvitationAccepted" />
+    <!-- 처음 열 때 불러오고, 한 번 연 뒤에는 닫는 애니메이션을 위해 남겨 둔다 -->
+    <ProfileModal v-if="isProfileModalOpen || loaded.profile" v-model:visible="isProfileModalOpen" />
+    <InvitationsModal v-if="isInvitationsOpen || loaded.invitations" v-model:visible="isInvitationsOpen"
+      @accepted="handleInvitationAccepted" />
     <WorkspaceModal
+      v-if="isWorkspaceModalOpen || loaded.workspace"
       v-model:visible="isWorkspaceModalOpen"
       :mode="workspaceModalMode"
       @created="handleWorkspaceCreated"
@@ -106,7 +109,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, defineAsyncComponent } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { ChevronUp, Users, User, Settings, Plus, Sun, Moon, LogOut, Mail } from 'lucide-vue-next'
@@ -115,9 +118,10 @@ import { useUiStore } from '@/stores/uiStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useFolderStore } from '@/stores/folderStore'
 import { usePostStore } from '@/stores/postStore'
-import ProfileModal from '@/components/modals/ProfileModal.vue'
-import WorkspaceModal from '@/components/modals/WorkspaceModal.vue'
-import InvitationsModal from '@/components/modals/InvitationsModal.vue'
+// 창 화면은 열 때 불러온다 (첫 화면을 가볍게)
+const ProfileModal = defineAsyncComponent(() => import('@/components/modals/ProfileModal.vue'))
+const WorkspaceModal = defineAsyncComponent(() => import('@/components/modals/WorkspaceModal.vue'))
+const InvitationsModal = defineAsyncComponent(() => import('@/components/modals/InvitationsModal.vue'))
 import UserAvatar from '@/components/common/UserAvatar.vue'
 
 const router = useRouter()
@@ -135,6 +139,10 @@ const isProfileModalOpen = ref(false)
 const isWorkspaceModalOpen = ref(false)
 const workspaceModalMode = ref('create')
 const isInvitationsOpen = ref(false)
+const loaded = ref({ profile: false, invitations: false, workspace: false })
+watch(isProfileModalOpen, (v) => { if (v) loaded.value.profile = true })
+watch(isInvitationsOpen, (v) => { if (v) loaded.value.invitations = true })
+watch(isWorkspaceModalOpen, (v) => { if (v) loaded.value.workspace = true })
 const invitationCount = computed(() => workspaceStore.myInvitations.length)
 
 function openInvitations() {
