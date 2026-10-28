@@ -59,6 +59,7 @@
           <tr><td>Cloudflare, Inc. (미국)</td><td>네트워크 보안·전송, 첨부 이미지 저장(R2)</td><td>접속 정보, 첨부 이미지</td></tr>
           <tr><td>Vercel Inc. (미국)</td><td>웹사이트 호스팅</td><td>웹사이트 접속 정보</td></tr>
           <tr><td>Google LLC (미국)</td><td>인증번호·초대 메일 발송(Gmail)</td><td>받는 사람 이메일, 메일 내용</td></tr>
+          <tr><td>Functional Software, Inc. (Sentry, 미국)</td><td>서비스 오류 수집·분석</td><td>오류 내용, 기기·브라우저 종류, 회원 번호</td></tr>
         </tbody>
       </table>
       <p>이전은 서비스 이용 시 네트워크를 통해 수시로 이루어지며, 보관 기간은 위 3항과 같습니다.</p>

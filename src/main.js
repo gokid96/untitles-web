@@ -8,6 +8,9 @@ import ToastService from 'primevue/toastservice'
 import App from './App.vue'
 import router from './router'
 import { isNativeApp } from './utils/platform'
+import { watch } from 'vue'
+import { initErrorTracking, setErrorUser } from './utils/errorTracking'
+import { useAuthStore } from './stores/authStore'
 
 // 블랙/화이트 모던 테마 프리셋 정의
 const ModernPreset = definePreset(Aura, {
@@ -55,6 +58,13 @@ app.use(PrimeVue, {
   },
 })
 app.use(ToastService)
+
+// 오류 추적: 화면을 그리기 전에 켜서 시작 단계의 오류도 잡는다
+initErrorTracking(app, router)
+{
+  const authStore = useAuthStore()
+  watch(() => authStore.currentUser?.userId, (id) => setErrorUser(id), { immediate: true })
+}
 
 // 스토어 앱: 휴대폰 보안 저장소의 로그인 정보를 먼저 되살린 뒤 화면을 띄운다
 if (isNativeApp) {
