@@ -99,11 +99,11 @@
 
       <!-- 하단 통계 -->
       <div class="sidebar-stats">
-        <span class="stat-item" :title="`폴더 ${currentWorkspace?.folderCount || 0}/${currentWorkspace?.folderLimit || 20}`">
-          <Folder class="stat-icon" /> {{ currentWorkspace?.folderCount || 0 }}/{{ currentWorkspace?.folderLimit || 20 }}
+        <span class="stat-item" :title="folderStatTitle" :aria-label="folderStatTitle">
+          <Folder class="stat-icon" /> {{ currentWorkspace?.unlimitedContent ? '∞' : `${currentWorkspace?.folderCount ?? 0}/${currentWorkspace?.folderLimit ?? 20}` }}
         </span>
-        <span class="stat-item" :title="`노트 ${currentWorkspace?.postCount || 0}/${currentWorkspace?.postLimit || 50}`">
-          <FileText class="stat-icon" /> {{ currentWorkspace?.postCount || 0 }}/{{ currentWorkspace?.postLimit || 50 }}
+        <span class="stat-item" :title="postStatTitle" :aria-label="postStatTitle">
+          <FileText class="stat-icon" /> {{ currentWorkspace?.unlimitedContent ? '∞' : `${currentWorkspace?.postCount ?? 0}/${currentWorkspace?.postLimit ?? 50}` }}
         </span>
         <button class="stat-item trash-button" title="휴지통" @click="isTrashOpen = true">
           <Trash2 class="stat-icon" /> 휴지통
@@ -168,6 +168,13 @@ const searchQuery = ref('')
 
 const folderTree = computed(() => folderStore.folderTree)
 const currentWorkspace = computed(() => workspaceStore.currentWorkspace)
+const folderStatTitle = computed(() => currentWorkspace.value?.unlimitedContent
+  ? `폴더 ${currentWorkspace.value?.folderCount ?? 0}개 · 개수 제한 없음`
+  : `폴더 ${currentWorkspace.value?.folderCount ?? 0}/${currentWorkspace.value?.folderLimit ?? 20}`)
+const postStatTitle = computed(() => currentWorkspace.value?.unlimitedContent
+  ? `노트 ${currentWorkspace.value?.postCount ?? 0}개 · 개수 제한 없음`
+  : `노트 ${currentWorkspace.value?.postCount ?? 0}/${currentWorkspace.value?.postLimit ?? 50}`)
+
 
 // 폴더 ID -> parentId 맵 (트리 변경 시에만 재생성)
 const folderParentMap = computed(() => {
